@@ -1,0 +1,12 @@
+# CodeWeaver backend dependencies.
+# Runtime tested against Python 3.14 on Windows.
+
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy[asyncio]>=2.0
+aiosqlite>=0.20
+pydantic>=2.7
+pydantic-settings>=2.2
+httpx>=0.27
+python-multipart>=0.0.9
+pyyaml>=6.0

@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeWeaver — Autonomous AI Engineering Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%E2%9A%92%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   CodeWeaver — design tokens
+   ================================================================ */
+:root{
+  --bg:#0d0d0d; --bg2:#0a0a0a; --panel:#141414; --panel2:#191919; --panel3:#1f1f1f;
+  --border:#262626; --border2:#333; --border3:#3f3f3f;
+  --text:#e8eaee; --muted:#8b909a; --dim:#5d626b;
+  --blue:#3b82f6; --blue2:#60a5fa; --blue-dim:rgba(59,130,246,.13); --blue-line:rgba(59,130,246,.38);
+  --green:#10b981; --green2:#34d399; --green-dim:rgba(16,185,129,.12); --green-line:rgba(16,185,129,.4);
+  --red:#ef4444; --red2:#f87171; --red-dim:rgba(239,68,68,.11); --red-line:rgba(239,68,68,.42);
+  --amber:#f59e0b; --amber2:#fbbf24; --amber-dim:rgba(245,158,11,.12); --amber-line:rgba(245,158,11,.4);
+  --cyan:#22d3ee; --violet:#a78bfa;
+  --mono:'JetBrains Mono',ui-monospace,'Cascadia Code',Consolas,'Courier New',monospace;
+  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --sbw:292px; --tw:360px; --sbh:30px;
+  --rad:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--text); font-family:var(--sans); font-size:13.5px; line-height:1.5;
+  display:flex; flex-direction:column; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+[hidden]{display:none!important}
+::selection{background:rgba(59,130,246,.35)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2c2c2c;border-radius:6px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:#3d3d3d}
+button{cursor:pointer;border:none;background:none;color:inherit;font-family:var(--sans)}
+input,select,textarea{
+  width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:7px;
+  padding:8px 10px; color:var(--text); font-family:var(--sans); font-size:12.5px; transition:border-color .15s, box-shadow .15s;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.14)}
+textarea{resize:vertical;min-height:88px;font-size:13px;line-height:1.55}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b909a' fill='none' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:26px}
+svg{flex:none;vertical-align:-2px}
+
+/* ================================================================
+   Shell layout
+   ================================================================ */
+#app{flex:1;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:1fr var(--sbh);height:100vh;overflow:hidden}
+  #app>*{min-height:0}
+
+/* ---------------- Left sidebar ---------------- */
+.sidebar{
+  width:var(--sbw); border-right:1px solid var(--border); background:var(--panel);
+  display:flex; flex-direction:column; min-height:0; overflow:hidden;
+  transition:width .28s cubic-bezier(.4,0,.2,1);
+}
+.sidebar.collapsed{width:0;border-right-color:transparent}
+.sb-inner{width:var(--sbw);min-width:var(--sbw);display:flex;flex-direction:column;min-height:0;height:100%}
+.sb-head{display:flex;align-items:center;gap:10px;padding:16px 14px 12px;border-bottom:1px solid var(--border)}
+.logo{
+  display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;letter-spacing:.2px;white-space:nowrap;
+  background:linear-gradient(92deg,#e8eaee 10%,var(--blue2) 55%,var(--cyan) 95%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:logoGlow 3.4s ease-in-out infinite;
+}
+@keyframes logoGlow{0%,100%{filter:drop-shadow(0 0 2px rgba(59,130,246,.25))}50%{filter:drop-shadow(0 0 9px rgba(59,130,246,.55))}}
+.logo .hammer{font-size:19px;-webkit-text-fill-color:initial}
+.logo-sub{font-size:9.5px;color:var(--dim);letter-spacing:1.4px;text-transform:uppercase;margin-top:1px;white-space:nowrap}
+.sb-collapse{margin-left:auto;color:var(--dim);padding:5px;border-radius:6px;display:flex}
+.sb-collapse:hover{color:var(--text);background:var(--panel3)}
+.sb-scroll{flex:1;overflow-y:auto;min-height:0;padding:14px 14px 8px}
+.sb-sec{margin-bottom:18px}
+.sb-sec-h{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.3px;margin-bottom:8px;user-select:none}
+.sb-sec-h .cnt{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--dim)}
+.sb-sec-h.clickable{cursor:pointer;border-radius:6px;padding:4px 6px;margin-left:-6px}
+.sb-sec-h.clickable:hover{background:var(--panel3);color:var(--text)}
+.sb-sec-h .chev{transition:transform .2s;color:var(--dim)}
+.sb-sec-h.closed .chev{transform:rotate(-90deg)}
+
+/* add-repo form */
+.addrepo-body{overflow:hidden;transition:max-height .28s ease,opacity .2s;max-height:340px;opacity:1}
+.addrepo-body.closed{max-height:0;opacity:0;pointer-events:none}
+.field{margin-bottom:9px}
+.field label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.field .pair{display:flex;gap:8px}
+.field .pair>*{flex:1}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:7px;
+  padding:8px 14px;font-weight:600;font-size:12.5px;border:1px solid transparent;
+  transition:background .15s,border-color .15s,transform .06s,box-shadow .15s;white-space:nowrap;
+}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 1px 8px rgba(59,130,246,.28)}
+.btn-primary:hover:not(:disabled){background:#2f74ea;box-shadow:0 2px 14px rgba(59,130,246,.4)}
+.btn-ghost{background:var(--panel3);border-color:var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--border3);background:var(--panel2)}
+.btn-block{width:100%}
+.btn .spin{display:none;width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+.btn.loading .spin{display:inline-block}
+.btn.loading .btn-ico{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* lists in sidebar */
+.item{
+  background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 10px;margin-bottom:7px;
+  cursor:pointer;transition:border-color .15s,background .15s,transform .12s;animation:fadeUp .25s ease both;
+}
+.item:hover{border-color:var(--border3);background:var(--panel3)}
+.item.active{border-color:var(--blue-line);background:var(--blue-dim);box-shadow:inset 2px 0 0 var(--blue)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.it-top{display:flex;align-items:center;gap:8px;min-width:0}
+.it-name{font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.it-meta{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden}
+.it-meta .mono{font-family:var(--mono);font-size:10px}
+.it-acts{display:none;gap:2px;margin-left:auto}
+.item:hover .it-acts{display:flex}
+.iconbtn{padding:4px;border-radius:5px;color:var(--dim);display:flex;transition:color .12s,background .12s}
+.iconbtn:hover{color:var(--text);background:var(--panel)}
+.iconbtn.danger:hover{color:var(--red);background:var(--red-dim)}
+.iconbtn.confirm{color:#fff;background:var(--red);animation:blinkC .9s ease infinite}
+@keyframes blinkC{50%{opacity:.65}}
+.mini-bar{height:3px;background:var(--bg2);border-radius:3px;margin-top:7px;overflow:hidden}
+.mini-bar span{display:block;height:100%;border-radius:3px;background:var(--blue);transition:width .5s ease}
+.mini-bar.ok span{background:var(--green)}
+.mini-bar.bad span{background:var(--red)}
+
+/* chips / badges */
+.chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.6px;padding:2px 7px;border-radius:5px;text-transform:uppercase;white-space:nowrap}
+.chip.st-RUNNING{background:var(--blue-dim);color:var(--blue2);border:1px solid var(--blue-line);animation:pulseChip 1.8s ease infinite}
+.chip.st-COMPLETED{background:var(--green-dim);color:var(--green2);border:1px solid var(--green-line)}
+.chip.st-FAILED{background:var(--red-dim);color:var(--red2);border:1px solid var(--red-line)}
+.chip.st-CANCELLED,.chip.st-PENDING{background:var(--panel3);color:var(--muted);border:1px solid var(--border2)}
+.chip.st-indexed{background:var(--green-dim);color:var(--green2);border:1px solid var(--green-line)}
+.chip.st-error,.chip.st-failed{background:var(--red-dim);color:var(--red2);border:1px solid var(--red-line)}
+.chip.st-pending{background:var(--amber-dim);color:var(--amber2);border:1px solid var(--amber-line)}
+@keyframes pulseChip{50%{opacity:.65}}
+.chip.mode-edit{background:var(--blue-dim);color:var(--blue2);border:1px solid var(--blue-line)}
+.chip.mode-read{background:var(--amber-dim);color:var(--amber2);border:1px solid var(--amber-line)}
+
+/* settings */
+.sb-foot{border-top:1px solid var(--border);padding:9px 14px;display:flex;align-items:center;gap:9px}
+.sb-foot .who{font-size:10.5px;color:var(--dim);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-foot .iconbtn{margin-left:auto}
+.pop{
+  position:fixed;left:10px;bottom:calc(var(--sbh) + 10px);width:272px;z-index:80;
+  background:var(--panel2);border:1px solid var(--border2);border-radius:12px;padding:14px;
+  box-shadow:0 12px 40px rgba(0,0,0,.6);animation:popIn .18s ease;
+}
+@keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+.pop h4{font-size:12px;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.pop .row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);padding:5px 0}
+.pop .row b{color:var(--text);font-family:var(--mono);font-size:10.5px}
+.pop .note{font-size:10px;color:var(--dim);margin-top:8px;line-height:1.45}
+.seg{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:2px;gap:2px}
+.seg-btn{flex:1;padding:5px 4px;border-radius:5px;font-size:10px;font-weight:700;font-family:var(--mono);color:var(--muted);letter-spacing:.4px;transition:all .15s;white-space:nowrap}
+.seg-btn:hover{color:var(--text)}
+.seg-btn.active{background:var(--blue);color:#fff;box-shadow:0 1px 6px rgba(59,130,246,.4)}
+.seg-btn.active.read{background:var(--amber);box-shadow:0 1px 6px rgba(245,158,11,.35)}
+
+/* ---------------- Center workspace ---------------- */
+.workspace{min-width:0;display:flex;flex-direction:column;background:
+  radial-gradient(1100px 380px at 55% -120px, rgba(59,130,246,.055), transparent 65%), var(--bg)}
+.topbar{
+  height:48px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px;
+  border-bottom:1px solid var(--border);background:rgba(13,13,13,.85);backdrop-filter:blur(6px);z-index:20;
+}
+.tb-ico{padding:6px;border-radius:7px;color:var(--dim);display:flex;transition:all .15s}
+.tb-ico:hover{color:var(--text);background:var(--panel3)}
+.tb-ico.on{color:var(--blue2);background:var(--blue-dim)}
+.crumb{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden}
+.crumb .cw{font-weight:700;font-size:13px;white-space:nowrap}
+.crumb .sep{color:var(--border3)}
+.crumb .path{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .sp{flex:1}
+.ws-scroll{flex:1;overflow-y:auto;min-height:0;padding:18px 22px 30px;scroll-behavior:smooth}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--rad);padding:16px;animation:fadeUp .3s ease both}
+.panel+.panel{margin-top:16px}
+.p-title{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;color:var(--muted);margin-bottom:12px}
+.p-title .ico{color:var(--blue)}
+.p-title .sub{margin-left:auto;font-size:10px;color:var(--dim);text-transform:none;letter-spacing:.3px;font-weight:500;font-family:var(--mono)}
+
+/* new task */
+#taskCount{font-family:var(--mono);font-size:10px;color:var(--dim);text-align:right;margin-top:4px}
+.task-grid{display:grid;grid-template-columns:1fr 236px auto;gap:10px;align-items:end;margin-top:10px}
+.task-grid .fld label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+#runBtn{height:38px;padding:0 20px;font-size:13px}
+.kbd-hint{font-size:10px;color:var(--dim);margin-top:8px;display:flex;gap:5px;align-items:center}
+.kbd{font-family:var(--mono);font-size:9.5px;background:var(--panel3);border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;padding:1px 5px;color:var(--muted)}
+
+/* empty hero */
+.hero{padding:54px 20px 40px;text-align:center;animation:fadeUp .4s ease both}
+.hero .glyph{
+  width:74px;height:74px;margin:0 auto 20px;border-radius:20px;display:flex;align-items:center;justify-content:center;
+  font-size:36px;background:linear-gradient(140deg,var(--blue-dim),rgba(34,211,238,.08));
+  border:1px solid var(--blue-line);animation:float 4s ease-in-out infinite;
+  box-shadow:0 0 34px rgba(59,130,246,.16);
+}
+@keyframes float{50%{transform:translateY(-7px)}}
+.hero h1{font-size:22px;font-weight:800;letter-spacing:-.3px}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--blue2),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--muted);max-width:520px;margin:9px auto 0;font-size:13px}
+.hero .steps3{display:flex;gap:10px;justify-content:center;margin-top:26px;flex-wrap:wrap}
+.hstep{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:9px 14px;font-size:11.5px;color:var(--muted)}
+.hstep b{color:var(--text);font-weight:600}
+.hstep .n{width:19px;height:19px;border-radius:50%;background:var(--blue-dim);border:1px solid var(--blue-line);color:var(--blue2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:var(--mono)}
+
+/* ---------------- Run view ---------------- */
+#liveRun>.panel{margin-top:12px}
+.run-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.run-head .rh-main{min-width:0;flex:1}
+#runTitle{font-size:15px;font-weight:700;line-height:1.4;word-break:break-word}
+.rh-meta{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.rh-meta .m{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:5px}
+.rh-meta .m b{color:var(--text);font-weight:600;font-family:var(--mono);font-size:10.5px}
+.rh-actions{display:flex;gap:7px;flex:none}
+
+/* pipeline stepper */
+.pipeline-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);padding:18px 14px 12px;overflow-x:auto}
+.pipeline{display:flex;align-items:flex-start;min-width:660px}
+.pstep{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;min-width:64px;position:relative}
+.pnode{
+  width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--panel2);border:1.5px solid var(--border2);color:var(--dim);z-index:2;transition:all .3s ease;
+}
+.plabel{font-size:9px;font-weight:700;letter-spacing:.9px;color:var(--dim);font-family:var(--mono);text-transform:uppercase;transition:color .3s;white-space:nowrap}
+.pline{height:2px;flex:1;background:var(--border);margin-top:17px;min-width:14px;position:relative;z-index:1;transition:background .35s}
+.pstep.idle .pnode{}
+.pstep.active .pnode{
+  border-color:var(--blue);color:var(--blue2);background:var(--blue-dim);
+  box-shadow:0 0 0 4px rgba(59,130,246,.14), 0 0 18px rgba(59,130,246,.45);
+  animation:pulseNode 1.5s ease infinite;
+}
+.pstep.active .plabel{color:var(--blue2)}
+@keyframes pulseNode{50%{box-shadow:0 0 0 7px rgba(59,130,246,.09), 0 0 24px rgba(59,130,246,.6)}}
+.pstep.done .pnode{border-color:var(--green);background:var(--green-dim);color:var(--green2)}
+.pstep.done .plabel{color:var(--green2)}
+.pstep.failed .pnode{border-color:var(--red);background:var(--red-dim);color:var(--red2);animation:shakeX .4s ease}
+.pstep.failed .plabel{color:var(--red2)}
+@keyframes shakeX{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.pline.done{background:var(--green);box-shadow:0 0 6px rgba(16,185,129,.5)}
+.pline.failed{background:var(--red)}
+
+/* progress */
+.prog-row{display:flex;align-items:center;gap:12px;margin:14px 2px 6px}
+#progPhase{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue2);letter-spacing:.8px}
+#progPhase.ok{color:var(--green2)} #progPhase.bad{color:var(--red2)}
+.prog-track{flex:1;height:7px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+#progFill{
+  height:100%;width:0;border-radius:6px;position:relative;
+  background:linear-gradient(90deg,var(--blue),var(--cyan));
+  box-shadow:0 0 10px rgba(59,130,246,.5);
+  transition:width .7s cubic-bezier(.4,0,.2,1), background .4s;
+}
+#progFill.ok{background:linear-gradient(90deg,var(--green),var(--green2));box-shadow:0 0 10px rgba(16,185,129,.5)}
+#progFill.bad{background:linear-gradient(90deg,var(--red),#f87171);box-shadow:0 0 10px rgba(239,68,68,.5)}
+#progFill.live::after{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(-45deg,rgba(255,255,255,.16) 0 8px,transparent 8px 16px);
+  animation:stripes 1s linear infinite;
+}
+@keyframes stripes{to{transform:translateX(22.6px)}}
+#progPct{font-family:var(--mono);font-size:12px;font-weight:700;min-width:44px;text-align:right}
+
+/* stats bar */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px;transition:border-color .2s}
+.stat:hover{border-color:var(--border3)}
+.stat .si{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
+.si.b{background:var(--blue-dim);color:var(--blue2)} .si.g{background:var(--green-dim);color:var(--green2)}
+.si.r{background:var(--red-dim);color:var(--red2)} .si.a{background:var(--amber-dim);color:var(--amber2)}
+.stat .sv{font-size:17px;font-weight:800;font-family:var(--mono);line-height:1.15}
+.stat .sv small{font-size:10px;color:var(--dim);font-weight:600}
+.stat .sl{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.9px}
+
+/* tabs */
+.tabs{display:flex;gap:6px;margin:18px 0 12px;flex-wrap:wrap}
+.tab{
+  display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:11.5px;font-weight:600;
+  color:var(--muted);background:var(--panel);border:1px solid var(--border);transition:all .15s;
+}
+.tab:hover{color:var(--text);border-color:var(--border3)}
+.tab.active{background:var(--blue-dim);border-color:var(--blue-line);color:var(--blue2)}
+.tab .tct{font-family:var(--mono);font-size:9.5px;background:var(--panel3);border-radius:4px;padding:0 5px;color:var(--muted)}
+.tab.active .tct{background:rgba(59,130,246,.22);color:var(--blue2)}
+
+/* plan */
+.plan-summary{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:12px}
+.plan-summary .txt{font-size:12.5px;color:var(--text)}
+.plan-summary .tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:9.5px;padding:2px 7px;border-radius:5px;border:1px solid var(--border2);color:var(--muted)}
+.tag.llm{border-color:var(--violet);color:var(--violet);background:rgba(167,139,250,.09)}
+.tag.blue{border-color:var(--blue-line);color:var(--blue2);background:var(--blue-dim)}
+.tag.amber{border-color:var(--amber-line);color:var(--amber2);background:var(--amber-dim)}
+.pstepcard{display:flex;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;margin-bottom:8px;animation:fadeUp .25s ease both}
+.pstepcard:hover{border-color:var(--border3)}
+.pstepcard .num{width:26px;height:26px;border-radius:7px;background:var(--blue-dim);border:1px solid var(--blue-line);color:var(--blue2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10.5px;font-weight:700;flex:none}
+.pstepcard .body{min-width:0;flex:1}
+.pstepcard .t{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pstepcard .d{font-size:11.5px;color:var(--muted);margin-top:2px}
+.pstepcard .files{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.fchip{font-family:var(--mono);font-size:9.5px;color:var(--cyan);background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.25);border-radius:4px;padding:1px 6px;word-break:break-all}
+.psub{margin-top:14px}
+.psub .h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.psub ul{list-style:none}
+.psub li{font-size:11.5px;color:var(--muted);padding:3px 0;display:flex;gap:8px;align-items:baseline}
+.psub li .dotm{color:var(--amber);flex:none}
+.psub li .dotg{color:var(--green);flex:none}
+.psub li code{font-family:var(--mono);font-size:10.5px;color:var(--cyan)}
+
+/* changes / diff */
+.chg{background:var(--bg2);border:1px solid var(--border);border-radius:9px;margin-bottom:9px;overflow:hidden;animation:fadeUp .25s ease both}
+.chg-h{display:flex;align-items:center;gap:9px;padding:9px 12px;cursor:pointer;user-select:none;transition:background .15s}
+.chg-h:hover{background:var(--panel2)}
+.chg-h .pth{font-family:var(--mono);font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.chg-h .desc{font-size:10.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38%}
+.chg-h .chev{color:var(--dim);transition:transform .2s}
+.chg.open .chg-h .chev{transform:rotate(180deg)}
+.chg-b{display:none;border-top:1px solid var(--border)}
+.chg.open .chg-b{display:block;animation:fadeUp .2s ease}
+.diff{font-family:var(--mono);font-size:11px;line-height:1.65;overflow-x:auto;padding:10px 12px;white-space:pre;max-height:360px;overflow-y:auto;background:var(--bg2)}
+.d-add{color:#4ade80;background:rgba(74,222,128,.07);display:inline-block;min-width:100%}
+.d-del{color:#f87171;background:rgba(248,113,113,.07);display:inline-block;min-width:100%}
+.d-hunk{color:var(--cyan)}
+.d-meta{color:var(--dim)}
+.diffstat{font-family:var(--mono);font-size:9.5px;white-space:nowrap}
+.diffstat .pa{color:var(--green2)} .diffstat .pd{color:var(--red2)}
+.ct-created{background:var(--green-dim);color:var(--green2);border:1px solid var(--green-line)}
+.ct-modified{background:var(--blue-dim);color:var(--blue2);border:1px solid var(--blue-line)}
+.ct-deleted{background:var(--red-dim);color:var(--red2);border:1px solid var(--red-line)}
+
+/* tests */
+.trun{background:var(--bg2);border:1px solid var(--border);border-radius:9px;margin-bottom:10px;overflow:hidden;animation:fadeUp .25s ease both}
+.trun-h{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.trun-h .cmd{font-family:var(--mono);font-size:11px;color:var(--cyan);flex:1;min-width:140px;word-break:break-all}
+.trun-h .cnts{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap}
+.trun-h .cnts .p{color:var(--green2)} .trun-h .cnts .f{color:var(--red2)} .trun-h .cnts .e{color:var(--amber2)}
+.case{display:flex;gap:9px;align-items:baseline;padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.03);animation:fadeUp .2s ease both}
+.case:last-child{border-bottom:none}
+.case .cst{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;flex:none;min-width:52px;text-align:center}
+.case .cst.passed{background:var(--green-dim);color:var(--green2)}
+.case .cst.failed,.case .cst.error{background:var(--red-dim);color:var(--red2)}
+.case .cst.skipped{background:var(--panel3);color:var(--muted)}
+.case .cst.unknown{background:var(--amber-dim);color:var(--amber2)}
+.case .cn{font-family:var(--mono);font-size:11px;word-break:break-all}
+.case .cm{font-size:10.5px;color:var(--muted);margin-top:1px;white-space:pre-wrap}
+.case .cdur{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--dim);flex:none}
+.rawout{font-family:var(--mono);font-size:10.5px;line-height:1.6;color:var(--muted);background:var(--bg);padding:10px 12px;overflow:auto;max-height:200px;white-space:pre-wrap}
+
+/* report */
+.rep-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.rep-verified{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.8px;padding:4px 10px;border-radius:6px}
+.rep-verified.yes{background:var(--green-dim);color:var(--green2);border:1px solid var(--green-line)}
+.rep-verified.no{background:var(--amber-dim);color:var(--amber2);border:1px solid var(--amber-line)}
+.rep-summary{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:13px 15px;font-size:12.5px;line-height:1.65;margin-bottom:14px}
+.rep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:9px;margin-bottom:14px}
+.rcell{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.rcell .v{font-family:var(--mono);font-size:16px;font-weight:700}
+.rcell .k{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;margin-top:1px}
+.rep-sec{margin-bottom:13px}
+.rep-sec .h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;display:flex;gap:6px;align-items:center}
+.rep-sec li{font-size:11.5px;color:var(--muted);list-style:none;padding:3px 0;display:flex;gap:8px;align-items:baseline}
+details.rawrep{margin-top:6px}
+details.rawrep summary{cursor:pointer;font-size:11px;color:var(--dim);user-select:none}
+details.rawrep summary:hover{color:var(--text)}
+details.rawrep pre{font-family:var(--mono);font-size:10.5px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;max-height:320px;white-space:pre-wrap;margin-top:8px}
+.rep-actions{margin-top:16px;display:flex;gap:10px;align-items:center}
+.github-btn{background:#238636;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:background .15s,transform .06s}
+.github-btn:hover{background:#2ea043}
+.github-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.github-btn.done{background:#1f6feb}
+
+/* placeholders & misc */
+.empty{color:var(--dim);font-size:12px;text-align:center;padding:26px 12px;border:1px dashed var(--border);border-radius:9px}
+.empty .eico{font-size:18px;margin-bottom:6px;opacity:.7}
+.sev-critical{color:#ff2d55;font-weight:700}.sev-high{color:var(--red2);font-weight:600}.sev-medium{color:var(--amber2)}.sev-low{color:var(--cyan)}.sev-info{color:var(--muted)}
+
+/* ---------------- Right terminal ---------------- */
+.terminal{
+  width:var(--tw);border-left:1px solid var(--border);background:var(--bg2);
+  display:flex;flex-direction:column;min-height:0;position:relative;overflow:hidden;
+  transition:width .28s cubic-bezier(.4,0,.2,1);
+}
+.terminal.collapsed{width:0;border-left-color:transparent}
+.term-inner{width:var(--tw);min-width:var(--tw);height:100%;display:flex;flex-direction:column;min-height:0}
+.term-head{display:flex;align-items:center;gap:9px;padding:10px 12px;border-bottom:1px solid var(--border);flex:none}
+.term-head .tt{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:1.5px;color:var(--muted)}
+.term-head .tt .tico{color:var(--green2);animation:termBlink 2.4s steps(2) infinite}
+@keyframes termBlink{50%{opacity:.35}}
+.term-head #termRun{font-family:var(--mono);font-size:9.5px;color:var(--blue2);background:var(--blue-dim);border:1px solid var(--blue-line);border-radius:4px;padding:1px 6px}
+.term-head #termCount{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-left:auto}
+.term-bodywrap{flex:1;min-height:0;position:relative;display:flex}
+#termBody{
+  flex:1;overflow-y:auto;padding:10px 12px 16px;font-family:var(--mono);font-size:11.3px;line-height:1.62;
+  background:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.013) 0 1px,transparent 1px 3px),
+    radial-gradient(500px 260px at 50% 0%,rgba(59,130,246,.03),transparent 70%),
+    var(--bg2);
+}
+.scanlines{position:absolute;inset:0;pointer-events:none;z-index:5;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px);mix-blend-mode:overlay;opacity:.5}
+.tl{padding:1.5px 0;border-bottom:1px dotted rgba(255,255,255,.035);word-break:break-word;animation:termIn .18s ease both}
+@keyframes termIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.tl .tl-t{color:var(--dim);font-size:9.8px;margin-right:7px}
+.tl .tl-ph{color:var(--blue2);font-weight:600;margin-right:7px;font-size:10px;letter-spacing:.4px}
+.tl .tl-msg{color:#b9bec8}
+.tl.lvl-warning .tl-msg{color:var(--amber2)}
+.tl.lvl-warning .tl-ph{color:var(--amber)}
+.tl.lvl-error .tl-msg{color:var(--red2)}
+.tl.lvl-error .tl-ph{color:var(--red)}
+.tl.lvl-error{background:rgba(239,68,68,.05);border-left:2px solid var(--red);padding-left:6px;margin-left:-8px}
+.tl.lvl-debug .tl-msg{color:var(--dim)}
+.tl.newphase{border-left:2px solid var(--blue);padding-left:6px;margin-left:-8px;background:rgba(59,130,246,.055)}
+.tl.newphase .tl-msg{color:var(--text);font-weight:600}
+.tl.sys{color:var(--dim);font-style:italic}
+.tl.sys .tl-msg{color:var(--dim)}
+.tl-think{margin:3px 0 2px 14px;padding:6px 9px;border-left:2px solid var(--violet);background:rgba(167,139,250,.055);color:#c4b5fd;font-size:10.6px;white-space:pre-wrap;font-style:italic;border-radius:0 5px 5px 0}
+.tl-data{margin:2px 0 2px 14px;color:var(--dim);font-size:10.2px;opacity:.85;word-break:break-all}
+.tl.ok .tl-msg{color:var(--green2)}
+.tl.ok .tl-ph{color:var(--green)}
+#jumpPill{
+  position:absolute;bottom:12px;right:14px;z-index:6;display:flex;align-items:center;gap:6px;
+  background:var(--blue);color:#fff;font-size:10.5px;font-weight:700;font-family:var(--mono);
+  border-radius:20px;padding:6px 12px;box-shadow:0 4px 18px rgba(59,130,246,.5);animation:popIn .2s ease;
+}
+.term-foot{flex:none;display:flex;align-items:center;gap:9px;padding:7px 12px;border-top:1px solid var(--border);font-family:var(--mono);font-size:9.5px;color:var(--dim)}
+.term-foot .live-ind{display:flex;align-items:center;gap:5px;color:var(--green2)}
+.term-foot .live-ind .d{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulseDot 1.4s ease infinite}
+@keyframes pulseDot{50%{opacity:.25;box-shadow:0 0 0 4px rgba(16,185,129,.15)}}
+.term-foot .sp{flex:1}
+
+/* ---------------- Status bar ---------------- */
+#statusbar{
+  height:var(--sbh);flex:none;display:flex;align-items:center;gap:16px;padding:0 14px;
+  background:var(--panel);border-top:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--muted);z-index:30;
+}
+.st-g{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.st-k{color:var(--dim);letter-spacing:.8px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none}
+.dot.live{background:var(--green);box-shadow:0 0 7px rgba(16,185,129,.8);animation:pulseDot 1.6s ease infinite}
+.dot.down{background:var(--red);box-shadow:0 0 7px rgba(239,68,68,.7);animation:pulseDot 1s ease infinite}
+#sbApi{color:var(--muted)}
+.chip.mini{font-size:9px;padding:1px 6px}
+.st-sp{flex:1}
+
+/* ---------------- Toasts ---------------- */
+#toasts{position:fixed;right:16px;bottom:calc(var(--sbh) + 14px);z-index:100;display:flex;flex-direction:column;gap:8px;max-width:340px}
+.toast{
+  display:flex;align-items:flex-start;gap:9px;background:var(--panel2);border:1px solid var(--border2);
+  border-radius:9px;padding:10px 13px;font-size:12px;box-shadow:0 10px 30px rgba(0,0,0,.55);
+  animation:toastIn .25s cubic-bezier(.2,.9,.3,1.2) both;
+}
+.toast.out{animation:toastOut .25s ease both}
+@keyframes toastIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateX(30px)}}
+.toast .ti{flex:none;margin-top:1px}
+.toast.ok .ti{color:var(--green2)} .toast.err .ti{color:var(--red2)} .toast.warn .ti{color:var(--amber2)} .toast.info .ti{color:var(--blue2)}
+.toast .tm{color:var(--text);line-height:1.45;word-break:break-word}
+
+/* ---------------- Responsive ---------------- */
+@media (max-width:1180px){
+  .task-grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:960px){
+  #app{grid-template-columns:1fr}
+  .sidebar{position:fixed;left:0;top:0;bottom:var(--sbh);z-index:60;transform:translateX(-102%);transition:transform .28s;box-shadow:8px 0 30px rgba(0,0,0,.5);width:var(--sbw)}
+  .sidebar.collapsed{width:var(--sbw);border-right-color:var(--border)}
+  .sidebar.open{transform:none}
+  .terminal{position:fixed;right:0;top:0;bottom:var(--sbh);z-index:60;transform:translateX(102%);transition:transform .28s;box-shadow:-8px 0 30px rgba(0,0,0,.5);width:var(--tw)}
+  .terminal.collapsed{width:var(--tw);border-left-color:var(--border)}
+  .terminal.open{transform:none}
+  .sb-inner,.term-inner{width:100%;min-width:0}
+  .ws-scroll{padding:14px}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ==================== LEFT SIDEBAR ==================== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-inner">
+      <div class="sb-head">
+        <div>
+          <div class="logo"><span class="hammer">⚒</span> CodeWeaver</div>
+          <div class="logo-sub">Autonomous Engineering</div>
+        </div>
+        <button class="sb-collapse" id="sbCollapse" title="Collapse sidebar"></button>
+      </div>
+
+      <div class="sb-scroll">
+        <!-- Add repository -->
+        <div class="sb-sec">
+          <div class="sb-sec-h clickable" id="addRepoToggle">
+            <span class="chev"></span><span data-ico="plus"></span> Add Repository
+          </div>
+          <div class="addrepo-body" id="addRepoBody">
+            <div style="padding-top:8px">
+              <div class="field"><label>Name</label><input id="repoName" placeholder="my_project" autocomplete="off"></div>
+              <div class="field"><label>Source</label>
+                <select id="repoSource">
+                  <option value="local">Local path</option>
+                  <option value="git">Git URL</option>
+                  <option value="github">GitHub</option>
+                </select>
+              </div>
+              <div class="field" id="repoPathWrap"><label>Path</label><input id="repoPath" placeholder="./sample_repos/notes_service" autocomplete="off"></div>
+              <div class="field" id="repoUrlWrap" hidden><label>URL</label><input id="repoUrl" placeholder="https://github.com/user/repo.git" autocomplete="off"></div>
+              <div class="field" id="repoBranchWrap" hidden><label>Branch <span style="text-transform:none;color:var(--dim)">(optional)</span></label><input id="repoBranch" placeholder="main" autocomplete="off"></div>
+              <button class="btn btn-primary btn-block" id="addRepoBtn"><span class="spin"></span><span data-ico="plus" class="btn-ico"></span>Index Repository</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Repositories -->
+        <div class="sb-sec">
+          <div class="sb-sec-h"><span data-ico="gitbranch"></span> Repositories <span class="cnt" id="repoCnt">0</span></div>
+          <div id="repoList"><div class="empty" style="padding:14px">No repositories yet</div></div>
+        </div>
+
+        <!-- Agent runs -->
+        <div class="sb-sec">
+          <div class="sb-sec-h"><span data-ico="history"></span> Agent Runs <span class="cnt" id="runCnt">0</span></div>
+          <div id="runList"><div class="empty" style="padding:14px">No runs yet</div></div>
+        </div>
+      </div>
+
+      <div class="sb-foot">
+        <span class="who" id="sbApiHint">offline</span>
+        <button class="iconbtn" id="settingsBtn" title="Settings"></button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==================== CENTER WORKSPACE ==================== -->
+  <main class="workspace">
+    <div class="topbar">
+      <button class="tb-ico" id="sbToggle" title="Toggle sidebar"></button>
+      <div class="crumb">
+        <span class="cw">⚒ CodeWeaver</span>
+        <span class="sep" id="crumbSep">/</span>
+        <span class="path" id="crumbPath">overview</span>
+      </div>
+      <span id="crumbChip"></span>
+      <span class="sp"></span>
+      <button class="btn btn-ghost" id="newTaskBtn" style="padding:6px 12px;font-size:11.5px"><span data-ico="edit"></span> New Task</button>
+      <button class="tb-ico on" id="termToggle" title="Toggle terminal"></button>
+    </div>
+
+    <div class="ws-scroll" id="wsScroll">
+
+      <!-- New agent task -->
+      <section class="panel" id="newTaskPanel">
+        <div class="p-title"><span class="ico" data-ico="zap"></span> New Agent Task
+          <span class="sub" id="providerHint"></span>
+        </div>
+        <textarea id="taskDesc" maxlength="4000" placeholder="Describe the engineering task… e.g. &quot;Find and fix the failing tests. Run pytest, identify root causes, and apply fixes.&quot;"></textarea>
+        <div id="taskCount">0 / 4000</div>
+        <div class="task-grid">
+          <div class="fld">
+            <label>Target repository</label>
+            <select id="taskRepo"><option value="">No repositories available</option></select>
+          </div>
+          <div class="fld">
+            <label>Execution mode</label>
+            <div class="seg" id="modeSeg">
+              <button type="button" class="seg-btn active" data-mode="WORKSPACE_EDIT">WORKSPACE_EDIT</button>
+              <button type="button" class="seg-btn read" data-mode="READ_ONLY">READ_ONLY</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="runBtn"><span class="spin"></span><span class="btn-ico" data-ico="play"></span><span class="btn-txt">Run Agent</span></button>
+        </div>
+        <div class="kbd-hint"><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> to launch · the agent runs through an 8-phase pipeline with live streaming output</div>
+      </section>
+
+      <!-- Empty hero -->
+      <section id="emptyHero" class="panel hero">
+        <div class="glyph">⚒</div>
+        <h1>Ship code with an <em>autonomous agent</em></h1>
+        <p>CodeWeaver analyzes your repository, retrieves relevant context, plans the change, implements it, runs your tests, debugs failures and reviews its own work — streaming every step live.</p>
+        <div class="steps3">
+          <div class="hstep"><span class="n">1</span><span><b>Index</b> a repository</span></div>
+          <div class="hstep"><span class="n">2</span><span><b>Describe</b> the task</span></div>
+          <div class="hstep"><span class="n">3</span><span><b>Watch</b> it engineer</span></div>
+        </div>
+      </section>
+
+      <!-- Live run -->
+      <section id="liveRun" hidden>
+        <div class="panel">
+          <div class="run-head">
+            <div class="rh-main">
+              <div id="runTitle">—</div>
+              <div class="rh-meta">
+                <span class="m"><span data-ico="gitbranch"></span> <b id="runRepo">—</b></span>
+                <span class="m"><span data-ico="clock"></span> <b id="runStarted">—</b></span>
+                <span class="m" id="runModeWrap"><span data-ico="shield"></span> <b id="runMode">—</b></span>
+                <span id="runChip"></span>
+              </div>
+            </div>
+            <div class="rh-actions">
+              <button class="btn btn-ghost" id="cancelBtn" style="padding:6px 12px;font-size:11.5px"><span data-ico="x"></span> Cancel</button>
+              <button class="btn btn-ghost" id="rerunBtn" style="padding:6px 12px;font-size:11.5px" title="Load this task into the composer"><span data-ico="refresh"></span> Re-run</button>
+            </div>
+          </div>
+
+          <div class="pipeline-wrap"><div class="pipeline" id="pipeline"></div></div>
+
+          <div class="prog-row">
+            <span id="progPhase">QUEUED</span>
+            <div class="prog-track"><div id="progFill"></div></div>
+            <span id="progPct">0%</span>
+          </div>
+
+          <div class="stats">
+            <div class="stat"><div class="si b" data-ico="file"></div><div><div class="sv" id="stFiles">0</div><div class="sl">Files changed</div></div></div>
+            <div class="stat"><div class="si a" data-ico="zap"></div><div><div class="sv" id="stRepairs">0</div><div class="sl">Repair iterations</div></div></div>
+            <div class="stat"><div class="si g" data-ico="check"></div><div><div class="sv" id="stTests">–</div><div class="sl">Tests pass / fail</div></div></div>
+            <div class="stat"><div class="si r" data-ico="clock"></div><div><div class="sv" id="stDur">–</div><div class="sl">Duration</div></div></div>
+          </div>
+        </div>
+
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-pane="panePlan"><span data-ico="map"></span> Plan <span class="tct" id="cntPlan">0</span></button>
+          <button class="tab" data-pane="paneChanges"><span data-ico="diff"></span> Changes <span class="tct" id="cntChanges">0</span></button>
+          <button class="tab" data-pane="paneTests"><span data-ico="activity"></span> Tests <span class="tct" id="cntTests">0</span></button>
+          <button class="tab" data-pane="paneReport"><span data-ico="flag"></span> Report <span class="tct" id="cntReport">–</span></button>
+        </div>
+        <div class="panel" id="panePlan"><div class="empty"><div class="eico" data-ico="map"></div>No plan yet — it will appear after the PLANNING phase</div></div>
+        <div class="panel" id="paneChanges" hidden><div class="empty"><div class="eico" data-ico="diff"></div>No file changes yet</div></div>
+        <div class="panel" id="paneTests" hidden><div class="empty"><div class="eico" data-ico="activity"></div>No test runs yet</div></div>
+        <div class="panel" id="paneReport" hidden><div class="empty"><div class="eico" data-ico="flag"></div>Report is generated when the run completes</div></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ==================== RIGHT TERMINAL ==================== -->
+  <aside class="terminal" id="terminal">
+    <div class="term-inner">
+      <div class="term-head">
+        <span class="tt"><span class="tico" data-ico="terminal"></span> TERMINAL</span>
+        <span id="termRun" hidden></span>
+        <span id="termCount">0 events</span>
+        <button class="iconbtn" id="termClear" title="Clear terminal"></button>
+        <button class="iconbtn" id="termCollapse" title="Collapse terminal"></button>
+      </div>
+      <div class="term-bodywrap">
+        <div id="termBody"></div>
+        <div class="scanlines"></div>
+        <button id="jumpPill" hidden><span data-ico="arrowdown"></span> <span id="jumpN">0 new</span></button>
+      </div>
+      <div class="term-foot">
+        <span class="live-ind" id="termLive"><span class="d"></span> <span id="termLiveTxt">idle</span></span>
+        <span class="sp"></span>
+        <span>sse://agent-runs/stream</span>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ==================== STATUS BAR ==================== -->
+<footer id="statusbar">
+  <div class="st-g"><span class="dot" id="sbDot"></span><span id="sbApi">connecting…</span></div>
+  <div class="st-g"><span class="st-k">LLM</span><span class="chip mini" id="llmChip">—</span></div>
+  <div class="st-g"><span class="st-k">MODE</span><span class="chip mini" id="modeChip">—</span></div>
+  <div class="st-g"><span class="st-k">RUN</span><span id="runStatusChip" class="chip mini" style="color:var(--muted)">idle</span></div>
+  <span class="st-sp"></span>
+  <div class="st-g"><span id="verChip">⚒ v—</span></div>
+  <div class="st-g"><span id="clockChip">--:--:--</span></div>
+</footer>
+
+<!-- Settings popover -->
+<div class="pop" id="settingsPop" hidden>
+  <h4><span data-ico="settings"></span> Settings</h4>
+  <div class="row"><span>Backend mode</span><b id="setBackendMode">—</b></div>
+  <div class="row"><span>API base</span><b id="setApiBase">—</b></div>
+  <div class="row"><span>Version</span><b id="setVersion">—</b></div>
+  <div class="row" style="display:block">
+    <div style="margin-bottom:6px">Default task mode <span style="color:var(--dim);font-size:10px">(used to pre-fill Run)</span></div>
+    <div class="seg" id="modeSeg2">
+      <button type="button" class="seg-btn active" data-mode="WORKSPACE_EDIT">WORKSPACE_EDIT</button>
+      <button type="button" class="seg-btn read" data-mode="READ_ONLY">READ_ONLY</button>
+    </div>
+  </div>
+  <button class="btn btn-ghost btn-block" id="reconnectBtn" style="margin-top:10px"><span data-ico="refresh"></span> Reconnect</button>
+  <div class="note">Backend agent mode is configured server-side via <code style="font-family:var(--mono)">CODEWEAVER_AGENT_MODE</code>. Task mode overrides it per run when permitted.</div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+'use strict';
+/* ==================================================================
+ * CodeWeaver dashboard — vanilla JS, no frameworks.
+ * ================================================================== */
+
+/* ---------------- constants ---------------- */
+const PHASES = [
+  ['ANALYZING','search'], ['RETRIEVING','database'], ['PLANNING','map'],
+  ['IMPLEMENTING','code'], ['TESTING','activity'], ['DEBUGGING','zap'],
+  ['REVIEWING','eye'], ['COMPLETED','flag'],
+];
+const STEP = { QUEUED:0, PENDING:0, ANALYZING:1, RETRIEVING:2, PLANNING:3, IMPLEMENTING:4,
+               TESTING:5, DEBUGGING:6, REVIEWING:7, COMPLETED:8, FAILED:8, CANCELLED:8 };
+const WEIGHT = { QUEUED:2, PENDING:2, ANALYZING:15, RETRIEVING:28, PLANNING:42, IMPLEMENTING:60,
+                 TESTING:80, DEBUGGING:88, REVIEWING:94, COMPLETED:100, FAILED:100, CANCELLED:100 };
+const TERMINAL_STATUS = ['COMPLETED','FAILED','CANCELLED'];
+
+/* ---------------- icons (inline SVG, feather-style) ---------------- */
+const I = {
+  search:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  database:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3"/>',
+  map:'<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>',
+  code:'<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+  activity:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+  check:'<polyline points="20 6 9 17 4 12"/>',
+  x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  trash:'<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  refresh:'<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+  play:'<polygon points="5 3 19 12 5 21 5 3"/>',
+  chevL:'<polyline points="15 18 9 12 15 6"/>',
+  chevR:'<polyline points="9 18 15 12 9 6"/>',
+  chevD:'<polyline points="6 9 12 15 18 9"/>',
+  chevU:'<polyline points="18 15 12 9 6 15"/>',
+  terminal:'<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  file:'<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/>',
+  gitbranch:'<line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+  arrowdown:'<line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  history:'<path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><polyline points="12 7 12 12 15 15"/>',
+  diff:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="4" y1="9" x2="4" y2="9"/><line x1="20" y1="15" x2="20" y2="15"/>',
+  edit:'<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+  alert:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  info:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  eraser:'<path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8L13.2 3c.8-.8 2-.8 2.8 0L21 8c.8.8.8 2 0 2.8L11 21"/>',
+  panelL:'<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>',
+  panelR:'<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/>',
+};
+function icon(n, s){ s = s || 14;
+  return '<svg viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(I[n]||'')+'</svg>';
+}
+
+/* ---------------- tiny helpers ---------------- */
+const $  = (s, r) => (r||document).querySelector(s);
+const $$ = (s, r) => Array.from((r||document).querySelectorAll(s));
+const esc = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const shortId = s => String(s||'').length>12 ? String(s).slice(0,8)+'…' : String(s||'');
+
+function fmtTs(ts){
+  if(!ts) return '--:--:--';
+  const d = new Date(ts);
+  if(isNaN(d)) return '--:--:--';
+  return d.toLocaleTimeString('en-GB',{hour12:false});
+}
+function fmtDur(ms){
+  if(ms==null || isNaN(ms)) return '–';
+  if(ms<0) ms = 0;
+  const s = ms/1000;
+  if(s<60) return (s<10 ? s.toFixed(1) : Math.round(s))+'s';
+  const m = Math.floor(s/60), r = Math.round(s%60);
+  if(m<60) return m+'m '+String(r).padStart(2,'0')+'s';
+  const h = Math.floor(m/60);
+  return h+'h '+(m%60)+'m';
+}
+function fmtRel(ts){
+  if(!ts) return '';
+  const d = new Date(ts); if(isNaN(d)) return '';
+  const s = (Date.now()-d.getTime())/1000;
+  if(s<60) return 'just now';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+function jsonShort(o){
+  try{ let s = JSON.stringify(o); return s.length>260 ? s.slice(0,260)+'…' : s; }catch(e){ return ''; }
+}
+/* backend wraps event payloads as {"data": {...}} — unwrap for display */
+function unwrapData(d){
+  if(d && typeof d==='object' && !Array.isArray(d)){
+    const keys = Object.keys(d);
+    if(keys.length===1 && keys[0]==='data' && d.data && typeof d.data==='object' && !Array.isArray(d.data)) return d.data;
+  }
+  return d;
+}
+const casesOf = r => Array.isArray(r && r.cases) ? r.cases
+  : (r && r.cases && Array.isArray(r.cases.cases)) ? r.cases.cases : [];
+/* pretty multi-line rendering of an event payload for the terminal */
+function dataLines(d){
+  const out = [];
+  if(d.plan && Array.isArray(d.plan.steps)){
+    out.push('plan: '+d.plan.steps.length+' step(s) · '+(d.plan.generated_by||'deterministic')
+      +(d.plan.affected_files?' · '+d.plan.affected_files.length+' affected file(s)':''));
+  }
+  if(Array.isArray(d.provenance) && d.provenance.length){
+    d.provenance.slice(0,6).forEach(p=>out.push('· '+p.path+':'+p.line_start+'-'+p.line_end
+      +(p.symbol?' in '+p.symbol:'')+' — '+p.reason+(p.score!=null?' ('+Number(p.score).toFixed(2)+')':'')));
+    if(d.provenance.length>6) out.push('… +'+(d.provenance.length-6)+' more chunks');
+  }
+  if(Array.isArray(d.observations)) d.observations.forEach(o=>out.push('· '+o));
+  if(d.command) out.push('· command: '+d.command);
+  if(d.exit_code!=null) out.push('· exit code: '+d.exit_code);
+  if(Array.isArray(d.files) && d.files.length) out.push('· files: '+d.files.join(', '));
+  if(d.review_counts) out.push('· review: '+jsonShort(d.review_counts));
+  if(d.security_counts) out.push('· security: '+jsonShort(d.security_counts));
+  if(!out.length) out.push(jsonShort(d));
+  return out;
+}
+
+/* ---------------- state ---------------- */
+const S = {
+  api:'', online:false, health:null,
+  repos:[], runs:[],
+  runId:null, run:null,
+  es:null, esRun:null,
+  lastPhase:'QUEUED', lastWork:'QUEUED', runStatus:'', doneHandled:false,
+  t0:null, timer:null,
+  seen:new Set(), evCount:0, termStuck:false, pendNew:0, lastTermPhase:null,
+  plan:null, changes:[], tests:[], report:null, rawReportShown:false,
+  mode: localStorage.getItem('cw_mode') || 'WORKSPACE_EDIT',
+  pollN:0, mobile: window.matchMedia('(max-width:960px)'),
+};
+
+/* ---------------- toast ---------------- */
+function toast(msg, kind){
+  kind = kind || 'info';
+  const el = document.createElement('div');
+  el.className = 'toast '+kind;
+  const ic = kind==='ok'?'check':kind==='err'?'alert':kind==='warn'?'alert':'info';
+  el.innerHTML = '<span class="ti">'+icon(ic,15)+'</span><span class="tm">'+esc(msg)+'</span>';
+  $('#toasts').appendChild(el);
+  setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(), 260); }, 4200);
+}
+
+/* ---------------- API ---------------- */
+async function api(path, opts){
+  opts = opts || {};
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), opts.timeout || 25000);
+  try{
+    const r = await fetch(S.api + path, Object.assign({}, opts, {
+      headers: Object.assign({'Content-Type':'application/json'}, opts.headers||{}),
+      signal: ctrl.signal,
+    }));
+    if(!r.ok){
+      let d = null; try{ d = await r.json(); }catch(e){}
+      let msg = 'HTTP '+r.status;
+      if(d && d.detail){
+        msg = typeof d.detail==='string' ? d.detail
+            : Array.isArray(d.detail) ? d.detail.map(x=>x.msg||x.type||'error').join('; ')
+            : JSON.stringify(d.detail);
+      }
+      const err = new Error(msg); err.status = r.status; throw err;
+    }
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+const soft = (p) => api(p).catch(()=>null);
+
+/* ---------------- backend detection ---------------- */
+async function detectApi(){
+  const cands = [];
+  if(location.protocol==='http:' || location.protocol==='https:') cands.push(location.origin);
+  ['http://127.0.0.1:8600','http://localhost:8600'].forEach(c=>{ if(!cands.includes(c)) cands.push(c); });
+  for(const c of cands){
+    try{
+      const r = await fetch(c+'/api/health',{cache:'no-store'});
+      if(r.ok){ S.api = c; return true; }
+    }catch(e){}
+  }
+  S.api = cands[cands.length-1];
+  return false;
+}
+
+/* ---------------- health / status bar ---------------- */
+let wasOnline = null;
+async function refreshHealth(){
+  try{
+    const h = await api('/api/health',{timeout:4000});
+    S.health = h;
+    setOnline(true);
+    $('#verChip').textContent = '⚒ v'+(h.version||'?');
+    $('#setVersion').textContent = h.version||'—';
+    $('#setBackendMode').textContent = h.agent_mode||'—';
+    const prov = (h.llm_provider||'none').toLowerCase();
+    const lc = $('#llmChip');
+    if(prov==='none'){ lc.textContent='none'; lc.style.cssText=''; }
+    else if(prov==='http_compatible'){ lc.textContent='groq (http_compatible)'; lc.style.cssText='background:var(--blue-dim);color:var(--blue2);border:1px solid var(--blue-line)'; }
+    else { lc.textContent=prov; lc.style.cssText='background:var(--panel3);color:var(--text)'; }
+    $('#providerHint').textContent = prov==='none' ? 'deterministic engine · no LLM configured' : 'provider: '+prov;
+  }catch(e){ setOnline(false); }
+}
+function setOnline(ok){
+  S.online = ok;
+  const dot = $('#sbDot'), lbl = $('#sbApi');
+  dot.className = 'dot '+(ok?'live':'down');
+  lbl.textContent = ok ? 'LIVE · '+S.api : 'DOWN · '+S.api;
+  lbl.style.color = ok ? 'var(--green2)' : 'var(--red2)';
+  $('#sbApiHint').textContent = ok ? shortId(S.api.replace(/^https?:\/\//,'')) : 'backend offline';
+  $('#settingsPop') && ($('#setApiBase').textContent = S.api || '—');
+  $('#termLiveTxt').textContent = ok ? (S.es ? 'streaming' : 'idle') : 'offline';
+  updateRunBtn();
+  if(wasOnline===false && ok) toast('Backend is online','ok');
+  if(wasOnline===true && !ok) toast('Lost connection to backend','err');
+  wasOnline = ok;
+}
+
+/* ---------------- repositories ---------------- */
+async function refreshRepos(){
+  const data = await soft('/api/repositories');
+  if(Array.isArray(data)){ S.repos = data; renderRepos(); renderRepoSelect(); updateRunBtn(); }
+}
+function repoBadgeClass(st){
+  st = (st||'').toLowerCase();
+  if(st==='indexed'||st==='ready'||st==='ok') return 'st-indexed';
+  if(st.includes('error')||st.includes('fail')) return 'st-error';
+  return 'st-pending';
+}
+function renderRepos(){
+  const box = $('#repoList');
+  // Deduplicate by name (keep most recent by id)
+  const seen = new Set();
+  const unique = S.repos.filter(r=>{ if(seen.has(r.name)) return false; seen.add(r.name); return true; });
+  $('#repoCnt').textContent = unique.length + (S.repos.length - unique.length ? ' ('+S.repos.length+' total)' : '');
+  if(!unique.length){ box.innerHTML = '<div class="empty" style="padding:14px">No repositories yet</div>'; return; }
+  box.innerHTML = unique.map((r,i)=>{
+    const sum = r.summary||{};
+    const meta = [];
+    if(sum.total_files!=null) meta.push(sum.total_files+' files');
+    if(sum.total_symbols) meta.push(sum.total_symbols+' symbols');
+    if(r.source) meta.push(r.source);
+    return '<div class="item repo-item" data-id="'+esc(r.id)+'" style="animation-delay:'+Math.min(i*30,240)+'ms">'
+      + '<div class="it-top"><span class="it-name">'+esc(r.name)+'</span>'
+      + '<span class="it-acts">'
+      +   '<button class="iconbtn" data-act="reindex" title="Re-index">'+icon('refresh',12)+'</button>'
+      +   '<button class="iconbtn danger" data-act="del" title="Delete">'+icon('trash',12)+'</button>'
+      + '</span></div>'
+      + '<div class="it-meta"><span class="chip '+repoBadgeClass(r.status)+'">'+esc(r.status||'?')+'</span>'
+      +   '<span class="mono">'+esc(meta.join(' · '))+'</span></div>'
+      + '</div>';
+  }).join('');
+}
+function renderRepoSelect(){
+  const sel = $('#taskRepo'); const cur = sel.value;
+  if(!S.repos.length){ sel.innerHTML = '<option value="">No repositories available</option>'; return; }
+  sel.innerHTML = S.repos.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>').join('');
+  if(S.repos.some(r=>r.id===cur)) sel.value = cur;
+}
+$('#repoList').addEventListener('click', async e=>{
+  const item = e.target.closest('.repo-item'); if(!item) return;
+  const id = item.dataset.id;
+  const act = e.target.closest('[data-act]');
+  if(act){
+    e.stopPropagation();
+    if(act.dataset.act==='reindex'){
+      act.innerHTML = icon('refresh',12); act.style.animation='spin 1s linear infinite';
+      try{ await api('/api/repositories/'+id+'/index',{method:'POST'}); toast('Repository re-indexed','ok'); }
+      catch(err){ toast('Re-index failed: '+err.message,'err'); }
+      act.style.animation=''; refreshRepos();
+    } else if(act.dataset.act==='del'){
+      if(!act.classList.contains('confirm')){
+        act.classList.add('confirm'); act.title='Click again to confirm';
+        setTimeout(()=>{ act.classList.remove('confirm'); act.title='Delete'; },2600);
+      } else {
+        try{ await api('/api/repositories/'+id,{method:'DELETE'}); toast('Repository deleted','ok'); }
+        catch(err){ toast('Delete failed: '+err.message,'err'); }
+        refreshRepos();
+      }
+    }
+    return;
+  }
+  const r = S.repos.find(x=>x.id===id);
+  if(r){ $('#taskRepo').value = id; $('#taskDesc').focus(); toast('Selected "'+r.name+'" for the next task','info'); }
+});
+function repoSourceChanged(){
+  const v = $('#repoSource').value;
+  $('#repoPathWrap').hidden = v!=='local';
+  $('#repoUrlWrap').hidden = v==='local';
+  $('#repoBranchWrap').hidden = v==='local';
+}
+$('#repoSource').addEventListener('change', repoSourceChanged);
+async function addRepo(){
+  const name = $('#repoName').value.trim();
+  if(!name){ toast('Repository name is required','warn'); $('#repoName').focus(); return; }
+  const source = $('#repoSource').value;
+  const body = { name, source };
+  if(source==='local') body.path = $('#repoPath').value.trim() || './sample_repos/notes_service';
+  else body.url = $('#repoUrl').value.trim();
+  const branch = $('#repoBranch').value.trim(); if(branch) body.branch = branch;
+  const btn = $('#addRepoBtn'); btn.disabled = true; btn.classList.add('loading');
+  try{
+    await api('/api/repositories',{method:'POST',body:JSON.stringify(body)});
+    toast('Repository indexed: '+name,'ok');
+    $('#repoName').value=''; $('#repoPath').value=''; $('#repoUrl').value=''; $('#repoBranch').value='';
+    toggleAddRepo(false); refreshRepos();
+  }catch(e){ toast('Index failed: '+e.message,'err'); }
+  finally{ btn.disabled=false; btn.classList.remove('loading'); }
+}
+$('#addRepoBtn').addEventListener('click', addRepo);
+function toggleAddRepo(force){
+  const body = $('#addRepoBody'), h = $('#addRepoToggle');
+  const closed = force!=null ? !force : body.classList.contains('closed');
+  body.classList.toggle('closed', closed); h.classList.toggle('closed', closed);
+}
+$('#addRepoToggle').addEventListener('click', ()=>toggleAddRepo());
+
+/* ---------------- runs history (sidebar) ---------------- */
+async function refreshRuns(){
+  const data = await soft('/api/agent-runs');
+  if(Array.isArray(data)){ S.runs = data; renderRuns(); }
+}
+function renderRuns(){
+  const box = $('#runList'); $('#runCnt').textContent = S.runs.length;
+  if(!S.runs.length){ box.innerHTML = '<div class="empty" style="padding:14px">No runs yet</div>'; return; }
+  box.innerHTML = S.runs.slice(0,20).map((r,i)=>{
+    const st = (r.status||'PENDING').toUpperCase();
+    const prog = r.progress||0;
+    const bar = st==='COMPLETED'?'ok':st==='FAILED'||st==='CANCELLED'?'bad':'';
+    const task = String(r.task||r.run_id||'');
+    return '<div class="item run-item'+(r.run_id===S.runId?' active':'')+'" data-id="'+esc(r.run_id)+'" style="animation-delay:'+Math.min(i*25,200)+'ms">'
+      + '<div class="it-top"><span class="it-name">'+esc(task.length>58?task.slice(0,58)+'…':task)+'</span>'
+      + '<span class="chip st-'+esc(st)+'">'+esc(st)+'</span></div>'
+      + '<div class="it-meta"><span class="mono">'+esc(r.repo_name||'—')+'</span><span>·</span><span>'+esc(fmtRel(r.created_at))+'</span>'
+      + '<span>·</span><span class="mono">'+esc((r.phase||st).toUpperCase())+'</span></div>'
+      + '<div class="mini-bar '+bar+'"><span style="width:'+prog+'%"></span></div>'
+      + '</div>';
+  }).join('');
+}
+$('#runList').addEventListener('click', e=>{
+  const item = e.target.closest('.run-item'); if(!item) return;
+  openRun(item.dataset.id);
+  if(S.mobile.matches) $('#sidebar').classList.remove('open');
+});
+
+/* ---------------- task composer ---------------- */
+function setMode(m){
+  S.mode = m==='READ_ONLY' ? 'READ_ONLY' : 'WORKSPACE_EDIT';
+  localStorage.setItem('cw_mode', S.mode);
+  $$('#modeSeg .seg-btn, #modeSeg2 .seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode===S.mode));
+}
+$$('#modeSeg .seg-btn, #modeSeg2 .seg-btn').forEach(b=>b.addEventListener('click', ()=>setMode(b.dataset.mode)));
+$('#taskDesc').addEventListener('input', ()=>{ $('#taskCount').textContent = $('#taskDesc').value.length+' / 4000'; });
+$('#taskDesc').addEventListener('keydown', e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); createTask(); }});
+function updateRunBtn(){
+  const btn = $('#runBtn');
+  btn.disabled = !S.online || !S.repos.length || btn.classList.contains('loading');
+  btn.title = !S.online ? 'Backend offline' : !S.repos.length ? 'Add a repository first' : 'Launch the agent';
+}
+$('#runBtn').addEventListener('click', createTask);
+async function createTask(){
+  if(!S.online){ toast('Backend is offline','err'); return; }
+  const repoId = $('#taskRepo').value;
+  const task = $('#taskDesc').value.trim();
+  if(!repoId){ toast('Add and select a repository first','warn'); return; }
+  if(task.length<3){ toast('Describe the task (at least 3 characters)','warn'); $('#taskDesc').focus(); return; }
+  const btn = $('#runBtn');
+  btn.disabled = true; btn.classList.add('loading');
+  $('.btn-txt', btn).textContent = 'Dispatching…';
+  try{
+    const r = await api('/api/tasks',{method:'POST',body:JSON.stringify({repo_id:repoId, task, mode:S.mode})});
+    toast('Agent run dispatched','ok');
+    $('#taskDesc').value=''; $('#taskCount').textContent='0 / 4000';
+    openRun(r.run_id);
+    refreshRuns();
+  }catch(e){ toast('Failed to start run: '+e.message,'err'); }
+  finally{
+    btn.classList.remove('loading'); $('.btn-txt', btn).textContent='Run Agent';
+    updateRunBtn();
+  }
+}
+$('#newTaskBtn').addEventListener('click', ()=>{
+  $('#newTaskPanel').scrollIntoView({behavior:'smooth'});
+  setTimeout(()=>$('#taskDesc').focus(), 350);
+});
+
+/* ==================================================================
+ * RUN VIEW — pipeline, progress, stats, panes
+ * ================================================================== */
+function renderPipelineIdle(){
+  const el = $('#pipeline');
+  el.innerHTML = PHASES.map((p,i)=>{
+    const step = '<div class="pstep idle" data-n="'+(i+1)+'">'
+      + '<div class="pnode">'+icon(p[1],15)+'</div><div class="plabel">'+p[0]+'</div></div>';
+    const line = i<PHASES.length-1 ? '<div class="pline"></div>' : '';
+    return step+line;
+  }).join('');
+}
+function renderPipeline(){
+  const el = $('#pipeline');
+  const failed = S.runStatus==='FAILED';
+  const completed = S.runStatus==='COMPLETED';
+  const cancelled = S.runStatus==='CANCELLED';
+  const cur = STEP[S.lastWork] || 0;
+  let html = '';
+  PHASES.forEach((p,i)=>{
+    const n = i+1;
+    let cls = 'idle', ico = p[1];
+    if(completed){ cls='done'; ico = n===8 ? 'flag' : 'check'; }
+    else if(failed){
+      if(n<cur){ cls='done'; ico='check'; }
+      else if(n===cur){ cls='failed'; ico='x'; }
+      else if(n===8){ cls='idle'; ico='flag'; }
+    }
+    else if(cancelled){ if(n<cur){ cls='done'; ico='check'; } }
+    else { if(n<cur){ cls='done'; ico='check'; } else if(n===cur){ cls='active'; } }
+    html += '<div class="pstep '+cls+'" data-n="'+n+'">'
+      + '<div class="pnode">'+icon(ico,15)+'</div><div class="plabel">'+p[0]+'</div></div>';
+    const lineCls = completed ? 'done' : failed ? (n<cur?'done':n===cur?'failed':'') : (n<cur?'done':'');
+    if(i<PHASES.length-1) html += '<div class="pline '+lineCls+'"></div>';
+  });
+  el.innerHTML = html;
+}
+function setProgress(pct, phase){
+  const f = $('#progFill'), p = $('#progPhase'), pc = $('#progPct');
+  pct = Math.max(0, Math.min(100, pct||0));
+  f.style.width = pct+'%';
+  pc.textContent = Math.round(pct)+'%';
+  const ph = (phase||'QUEUED').toUpperCase();
+  p.textContent = ph;
+  p.className = '';
+  f.classList.remove('ok','bad','live');
+  if(S.runStatus==='COMPLETED'){ p.classList.add('ok'); f.classList.add('ok'); }
+  else if(S.runStatus==='FAILED'||S.runStatus==='CANCELLED'){ p.classList.add('bad'); f.classList.add('bad'); }
+  else { f.classList.add('live'); p.style.color='var(--blue2)'; }
+}
+function setStat(id, html){ $('#'+id).innerHTML = html; }
+function startTimer(fromIso){
+  stopTimer(false);
+  S.t0 = fromIso ? (new Date(fromIso).getTime()||Date.now()) : Date.now();
+  setStat('stDur', '<small>…</small>');
+  S.timer = setInterval(()=>{
+    const el = $('#stDur'); if(el) el.textContent = fmtDur(Date.now()-S.t0);
+  }, 1000);
+}
+function stopTimer(final){
+  if(S.timer){ clearInterval(S.timer); S.timer=null; }
+  if(final){
+    const r = S.run;
+    if(r && r.started_at){
+      const end = r.finished_at ? new Date(r.finished_at).getTime() : Date.now();
+      const st = new Date(r.started_at).getTime();
+      if(!isNaN(end)&&!isNaN(st)) setStat('stDur', esc(fmtDur(end-st)));
+    }
+  }
+}
+function statusChipHtml(st){
+  st = (st||'PENDING').toUpperCase();
+  return '<span class="chip st-'+esc(st)+'">'+esc(st)+'</span>';
+}
+function updateStatusbarRun(){
+  const c = $('#runStatusChip');
+  const st = (S.runStatus||'').toUpperCase();
+  if(!st){ c.textContent='idle'; c.style.cssText=''; c.className='chip mini'; return; }
+  c.className = 'chip mini st-'+esc(st);
+  c.textContent = st;
+}
+
+/* ---------------- open a run ---------------- */
+async function openRun(runId){
+  stopStream();
+  S.runId = runId; S.esRun = runId;
+  S.doneHandled = false; S.evCount = 0; S.seen.clear();
+  S.lastPhase = 'QUEUED'; S.lastWork = 'QUEUED'; S.runStatus = 'PENDING';
+  S.plan = null; S.changes = []; S.tests = []; S.report = null; S.rawReportShown = false;
+  S.run = S.runs.find(r=>r.run_id===runId) || null;
+
+  $('#emptyHero').hidden = true;
+  $('#liveRun').hidden = false;
+  $('#crumbPath').textContent = 'run '+shortId(runId);
+  $('#crumbChip').innerHTML = '';
+  $('#termRun').hidden = false; $('#termRun').textContent = shortId(runId);
+
+  // reset UI
+  renderPipelineIdle();
+  setProgress(WEIGHT.QUEUED,'QUEUED');
+  setStat('stFiles','0'); setStat('stRepairs','0'); setStat('stTests','–'); setStat('stDur','–');
+  $('#cntPlan').textContent='0'; $('#cntChanges').textContent='0'; $('#cntTests').textContent='0'; $('#cntReport').textContent='–';
+  $('#cancelBtn').hidden = false;
+  $('#runTitle').textContent = S.run && S.run.task ? S.run.task : 'Loading run '+shortId(runId)+'…';
+  $('#runRepo').textContent = S.run && S.run.repo_name ? S.run.repo_name : '—';
+  $('#runMode').textContent = S.run && S.run.mode ? S.run.mode : '—';
+  $('#runStarted').textContent = S.run && S.run.created_at ? fmtRel(S.run.created_at) : '—';
+  $('#runChip').innerHTML = statusChipHtml('PENDING');
+  activateTab('panePlan');
+  setPaneHtml('panePlan', '<div class="empty"><div class="eico">'+icon('map',16)+'</div>No plan yet — it will appear after the PLANNING phase</div>');
+  setPaneHtml('paneChanges', '<div class="empty"><div class="eico">'+icon('diff',16)+'</div>No file changes yet</div>');
+  setPaneHtml('paneTests', '<div class="empty"><div class="eico">'+icon('activity',16)+'</div>No test runs yet</div>');
+  setPaneHtml('paneReport', '<div class="empty"><div class="eico">'+icon('flag',16)+'</div>Report is generated when the run completes</div>');
+
+  clearTerm(true);
+  sysLine('attached to run '+runId, 'sys');
+
+  renderRuns(); updateStatusbarRun();
+  $('#liveRun').scrollIntoView({behavior:'smooth', block:'start'});
+
+  await loadRunMeta(runId);
+  connectStream(runId);
+}
+async function loadRunMeta(runId){
+  const r = await soft('/api/agent-runs/'+runId);
+  if(!r){ sysLine('run not found: '+runId,'err'); return; }
+  if(S.runId!==runId) return;
+  applyMeta(r);
+  // hydrate whatever already exists
+  loadPlan(runId); loadChanges(runId); loadTests(runId);
+  if(r.report_available) loadReport(runId);
+}
+function applyMeta(r){
+  S.run = r;
+  const st = (r.status||'PENDING').toUpperCase();
+  S.runStatus = st;
+  $('#runTitle').textContent = r.task || '(untitled task)';
+  $('#runRepo').textContent = r.repo_name || '—';
+  $('#runMode').textContent = r.mode || '—';
+  $('#runMode').style.color = r.mode==='READ_ONLY' ? 'var(--amber2)' : 'var(--blue2)';
+  $('#runStarted').textContent = r.created_at ? fmtRel(r.created_at) : '—';
+  $('#runChip').innerHTML = statusChipHtml(st);
+  $('#crumbChip').innerHTML = statusChipHtml(st);
+  $('#cancelBtn').hidden = false;
+  $('#cancelBtn').style.display = TERMINAL_STATUS.includes(st) ? 'none' : '';
+  updateStatusbarRun();
+  if(TERMINAL_STATUS.includes(st)){
+    stopTimer(true);
+    renderPipeline(); setProgress(WEIGHT[st]||100, st);
+  } else {
+    const ph = (r.phase||'QUEUED').toUpperCase();
+    S.lastWork = STEP[ph] ? ph : S.lastWork;
+    renderPipeline(); setProgress(WEIGHT[ph]||5, ph);
+    if(st==='RUNNING' && !S.timer && r.started_at) startTimer(r.started_at);
+    if(st==='PENDING' && !S.timer && r.created_at) startTimer(r.created_at);
+  }
+}
+
+/* ---------------- SSE streaming ---------------- */
+function connectStream(runId){
+  stopStream();
+  if(!S.online){ sysLine('backend offline — cannot stream','err'); return; }
+  const es = new EventSource(S.api+'/api/agent-runs/'+runId+'/stream');
+  S.es = es; S.esRun = runId;
+  $('#termLiveTxt').textContent = 'streaming';
+  es.onopen = ()=>{ if(S.runId===runId) sysLine('live stream connected','sys'); };
+  es.onmessage = e=>{
+    if(S.runId!==runId) return;
+    if(!e.data) return;
+    let ev; try{ ev = JSON.parse(e.data); }catch(err){ return; }
+    if(!ev || typeof ev!=='object') return;
+    if(!ev.phase && !ev.message) return; // final blank-data event
+    handleEvent(ev);
+  };
+  es.addEventListener('done', ()=>{
+    es.close();
+    if(S.es===es){ S.es=null; }
+    if(S.runId===runId) onRunDone();
+  });
+  es.onerror = ()=>{
+    es.close();
+    if(S.es===es) S.es=null;
+    if(S.runId!==runId) return;
+    sysLine('stream interrupted — reconnecting…','warn');
+    setTimeout(async ()=>{
+      if(S.runId!==runId || S.doneHandled) return;
+      const r = await soft('/api/agent-runs/'+runId);
+      if(S.runId!==runId) return;
+      if(r && TERMINAL_STATUS.includes((r.status||'').toUpperCase())){ applyMeta(r); onRunDone(); }
+      else if(r){ connectStream(runId); } // history is replayed & deduped
+      else { setTimeout(()=>{ if(S.runId===runId && !S.doneHandled) connectStream(runId); }, 3000); }
+    }, 1600);
+  };
+}
+function stopStream(){ if(S.es){ try{ S.es.close(); }catch(e){} S.es=null; } $('#termLiveTxt').textContent='idle'; }
+
+function handleEvent(ev){
+  const key = [ev.ts,ev.phase,ev.level,ev.message].join('|');
+  if(S.seen.has(key)) return;
+  S.seen.add(key);
+  appendTerm(ev);
+  const ud = unwrapData(ev.data);
+  if(ud && ud.plan && Array.isArray(ud.plan.steps)){ S.plan = ud.plan; renderPlan(); } // live plan from event payload
+  const ph = String(ev.phase||'').toUpperCase();
+  if(!ph) return;
+  if(TERMINAL_STATUS.includes(ph)){
+    S.runStatus = ph;
+    renderPipeline(); setProgress(100, ph);
+    onRunDone();
+    return;
+  }
+  S.lastWork = ph; S.lastPhase = ph;
+  if(S.runStatus==='PENDING'||!S.runStatus) S.runStatus = 'RUNNING';
+  renderPipeline(); setProgress(WEIGHT[ph]||5, ph);
+  if(!S.timer) startTimer(S.run&&S.run.started_at);
+  if(ph==='PLANNING') loadPlan(S.runId);
+  if(ph==='IMPLEMENTING'){ loadChanges(S.runId); }
+  if(ph==='TESTING'||ph==='DEBUGGING'){ loadTests(S.runId); loadChanges(S.runId); }
+  if(ph==='DEBUGGING'){
+    const m = /iteration\s+(\d+)/i.exec(ev.message||'');
+    if(m) setStat('stRepairs', esc(m[1]));
+  }
+}
+
+async function onRunDone(){
+  if(S.doneHandled) return;
+  S.doneHandled = true;
+  stopStream();
+  const runId = S.runId;
+  stopTimer(true);
+  const r = await soft('/api/agent-runs/'+runId);
+  if(r && S.runId===runId) applyMeta(r);
+  await Promise.all([
+    loadPlan(runId), loadChanges(runId), loadTests(runId), loadReport(runId),
+  ]);
+  refreshRuns();
+  const ok = S.runStatus==='COMPLETED';
+  sysLine(ok ? '— run completed —' : '— run '+S.runStatus.toLowerCase()+' —', ok?'ok':'err');
+  toast(ok ? 'Run completed successfully' : 'Run ended: '+S.runStatus, ok?'ok':'err');
+}
+$('#cancelBtn').addEventListener('click', async ()=>{
+  if(!S.runId) return;
+  try{ await api('/api/agent-runs/'+S.runId+'/cancel',{method:'POST'}); toast('Cancellation requested…','warn'); }
+  catch(e){ toast(e.status===409 ? 'Run is not active' : 'Cancel failed: '+e.message, 'err'); }
+});
+$('#rerunBtn').addEventListener('click', ()=>{
+  if(!S.run) return;
+  $('#taskDesc').value = S.run.task||'';
+  $('#taskCount').textContent = ($('#taskDesc').value.length)+' / 4000';
+  if(S.run.repo_id){ const sel=$('#taskRepo'); if($$('option',sel).some(o=>o.value===S.run.repo_id)) sel.value=S.run.repo_id; }
+  setMode(S.run.mode||S.mode);
+  $('#newTaskPanel').scrollIntoView({behavior:'smooth'});
+  $('#taskDesc').focus();
+});
+
+/* ==================================================================
+ * Data panes
+ * ================================================================== */
+function setPaneHtml(id, html){ $('#'+id).innerHTML = html; }
+function activateTab(id){
+  $$('#tabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.pane===id));
+  ['panePlan','paneChanges','paneTests','paneReport'].forEach(p=>$('#'+p).hidden = p!==id);
+}
+$('#tabs').addEventListener('click', e=>{
+  const t = e.target.closest('.tab'); if(t) activateTab(t.dataset.pane);
+});
+
+/* ---- plan ---- */
+async function loadPlan(runId){
+  const p = await soft('/api/agent-runs/'+runId+'/plan');
+  if(S.runId!==runId) return;
+  S.plan = p; renderPlan();
+}
+function renderPlan(){
+  const el = 'panePlan';
+  if(!S.plan || !Array.isArray(S.plan.steps)){
+    setPaneHtml(el, '<div class="empty"><div class="eico">'+icon('map',16)+'</div>'+(S.doneHandled?'No plan available for this run':'No plan yet — it will appear after the PLANNING phase')+'</div>');
+    $('#cntPlan').textContent='0'; return;
+  }
+  const p = S.plan;
+  $('#cntPlan').textContent = p.steps.length;
+  let h = '<div class="plan-summary"><div class="txt">'+esc(p.summary||'No summary provided.')+'</div><div class="tags">'
+    + '<span class="tag '+(p.generated_by==='llm'?'llm':'blue')+'">'+esc((p.generated_by||'deterministic').toUpperCase())+'</span>'
+    + (p.task_type?'<span class="tag">'+esc(p.task_type)+'</span>':'')
+    + '<span class="tag">'+p.steps.length+' steps</span>'
+    + (p.affected_files&&p.affected_files.length?'<span class="tag amber">'+p.affected_files.length+' affected files</span>':'')
+    + '</div></div>';
+  h += p.steps.map((s,i)=>'<div class="pstepcard" style="animation-delay:'+Math.min(i*40,320)+'ms">'
+    + '<div class="num">'+esc(s.id||i+1)+'</div>'
+    + '<div class="body"><div class="t">'+esc(s.title)+' <span class="tag blue">'+esc(s.kind||'modify')+'</span></div>'
+    + (s.description?'<div class="d">'+esc(s.description)+'</div>':'')
+    + (s.files&&s.files.length?'<div class="files">'+s.files.map(f=>'<span class="fchip">'+esc(f)+'</span>').join('')+'</div>':'')
+    + (s.validation?'<div class="d" style="margin-top:5px;color:var(--dim)">✔ '+esc(s.validation)+'</div>':'')
+    + '</div></div>').join('');
+  if(p.tests_required&&p.tests_required.length){
+    h += '<div class="psub"><div class="h">'+icon('activity',11)+' Required tests</div><ul>'
+      + p.tests_required.map(t=>'<li><span class="dotg">▸</span><code>'+esc(t)+'</code></li>').join('')+'</ul></div>';
+  }
+  if(p.validation_commands&&p.validation_commands.length){
+    h += '<div class="psub"><div class="h">'+icon('terminal',11)+' Validation commands</div><ul>'
+      + p.validation_commands.map(t=>'<li><span class="dotg">▸</span><code>'+esc(t)+'</code></li>').join('')+'</ul></div>';
+  }
+  if(p.risks&&p.risks.length){
+    h += '<div class="psub"><div class="h">'+icon('alert',11)+' Risks</div><ul>'
+      + p.risks.map(t=>'<li><span class="dotm">▲</span>'+esc(t)+'</li>').join('')+'</ul></div>';
+  }
+  setPaneHtml(el, h);
+}
+
+/* ---- changes / diff ---- */
+async function loadChanges(runId){
+  const c = await soft('/api/agent-runs/'+runId+'/changes');
+  if(S.runId!==runId) return;
+  S.changes = Array.isArray(c)?c:[];
+  renderChanges();
+}
+function computeDiff(c){
+  if(c.diff && String(c.diff).trim()) return String(c.diff);
+  if(c.before_text!=null && c.after_text!=null && (c.before_text||c.after_text)) return lineDiff(c.before_text, c.after_text);
+  return '';
+}
+function lineDiff(a,b){
+  const A = String(a||'').split('\n'), B = String(b||'').split('\n');
+  if(A.length*B.length > 400000){
+    return '--- before ---\n'+A.slice(0,120).join('\n')+'\n\n+++ after +++\n'+B.slice(0,120).join('\n');
+  }
+  const m=A.length, n=B.length;
+  const dp = Array.from({length:m+1},()=>new Uint16Array(n+1));
+  for(let i=m-1;i>=0;i--) for(let j=n-1;j>=0;j--)
+    dp[i][j] = A[i]===B[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+  const out=[]; let i=0,j=0;
+  while(i<m && j<n){
+    if(A[i]===B[j]){ out.push('  '+A[i]); i++; j++; }
+    else if(dp[i+1][j] >= dp[i][j+1]){ out.push('- '+A[i]); i++; }
+    else { out.push('+ '+B[j]); j++; }
+  }
+  while(i<m) out.push('- '+A[i++]);
+  while(j<n) out.push('+ '+B[j++]);
+  return out.join('\n');
+}
+function diffHtml(text){
+  if(!text) return '<div class="empty" style="border:none;padding:10px">No diff content</div>';
+  return String(text).split('\n').map(l=>{
+    if(l.startsWith('+++')||l.startsWith('---')) return '<span class="d-meta">'+esc(l)+'</span>';
+    if(l.startsWith('@@')) return '<span class="d-hunk">'+esc(l)+'</span>';
+    if(l.startsWith('+')) return '<span class="d-add">'+esc(l)+'</span>';
+    if(l.startsWith('-')) return '<span class="d-del">'+esc(l)+'</span>';
+    return esc(l);
+  }).join('\n');
+}
+function renderChanges(){
+  const el = 'paneChanges';
+  const n = S.changes.length;
+  $('#cntChanges').textContent = n;
+  setStat('stFiles', String(n));
+  if(!n){ setPaneHtml(el, '<div class="empty"><div class="eico">'+icon('diff',16)+'</div>'+(S.doneHandled?'No file changes':'No file changes yet')+'</div>'); return; }
+  setPaneHtml(el, S.changes.map((c,i)=>{
+    const ct = (c.change_type||'modified').toLowerCase();
+    const d = computeDiff(c);
+    const adds = d? d.split('\n').filter(l=>l.startsWith('+')&&!l.startsWith('+++')).length : 0;
+    const dels = d? d.split('\n').filter(l=>l.startsWith('-')&&!l.startsWith('---')).length : 0;
+    return '<div class="chg" data-i="'+i+'">'
+      + '<div class="chg-h">'
+      +   '<span class="chev">'+icon('chevD',13)+'</span>'
+      +   '<span class="chip '+('ct-'+esc(ct))+'" style="border:1px solid">'+esc(ct)+'</span>'
+      +   '<span class="pth">'+esc(c.path)+'</span>'
+      +   (c.description?'<span class="desc">'+esc(c.description)+'</span>':'')
+      +   (d?'<span class="diffstat"><span class="pa">+'+adds+'</span> <span class="pd">−'+dels+'</span></span>':'')
+      + '</div>'
+      + '<div class="chg-b"><div class="diff">'+diffHtml(d)+'</div></div>'
+      + '</div>';
+  }).join(''));
+}
+$('#paneChanges').addEventListener('click', e=>{
+  const h = e.target.closest('.chg-h'); if(h) h.parentElement.classList.toggle('open');
+});
+
+/* ---- tests ---- */
+async function loadTests(runId){
+  const t = await soft('/api/agent-runs/'+runId+'/tests');
+  if(S.runId!==runId) return;
+  S.tests = Array.isArray(t)?t:[];
+  renderTests();
+}
+function renderTests(){
+  const el = 'paneTests';
+  const runs = S.tests;
+  const totalCases = runs.reduce((a,r)=>a+casesOf(r).length,0);
+  $('#cntTests').textContent = runs.length ? runs.length+(totalCases?' / '+totalCases:'') : '0';
+  const P = runs.reduce((a,r)=>a+(r.passed||0),0), F = runs.reduce((a,r)=>a+(r.failed||0),0);
+  setStat('stTests', P+F ? '<span style="color:var(--green2)">'+P+'</span><small> / </small><span style="color:'+(F?'var(--red2)':'var(--dim)')+'">'+F+'</span>' : '–');
+  if(!runs.length){
+    setPaneHtml(el, '<div class="empty"><div class="eico">'+icon('activity',16)+'</div>'+(S.doneHandled?'No tests were executed':'No test runs yet')+'</div>'); return;
+  }
+  setPaneHtml(el, runs.map(r=>{
+    const ok = !!r.all_passed;
+    let h = '<div class="trun"><div class="trun-h">'
+      + '<span class="chip '+(ok?'st-COMPLETED':'st-FAILED')+'">'+(ok?'PASSED':'FAILED')+'</span>'
+      + '<span class="cmd">'+esc(r.command||'test')+'</span>'
+      + '<span class="cnts"><span class="p">'+(r.passed||0)+' passed</span> · <span class="f">'+(r.failed||0)+' failed</span> · <span class="e">'+(r.errors||0)+' errors</span>'
+      + (r.skipped?' · '+(r.skipped)+' skipped':'')
+      + (r.duration_ms?' · '+fmtDur(r.duration_ms):'')+'</span></div>';
+    const cases = casesOf(r);
+    if(cases.length){
+      h += cases.map((c,i)=>'<div class="case" style="animation-delay:'+Math.min(i*25,300)+'ms">'
+        + '<span class="cst '+esc(c.status||'unknown')+'">'+esc(c.status||'unknown')+'</span>'
+        + '<div style="min-width:0;flex:1"><div class="cn">'+esc(c.name||'(unnamed)')+'</div>'
+        + (c.message?'<div class="cm">'+esc(c.message)+'</div>':'')+'</div>'
+        + (c.duration_ms?'<span class="cdur">'+fmtDur(c.duration_ms)+'</span>':'')
+        + '</div>').join('');
+    } else if(r.raw_output_tail){
+      h += '<div class="rawout">'+esc(r.raw_output_tail)+'</div>';
+    }
+    return h+'</div>';
+  }).join(''));
+}
+
+/* ---- report ---- */
+async function loadReport(runId){
+  const rep = await soft('/api/agent-runs/'+runId+'/report');
+  if(S.runId!==runId) return;
+  if(!rep){ return; }
+  S.report = rep; renderReport();
+}
+function renderReport(){
+  const r = S.report; if(!r) return;
+  const el = 'paneReport';
+  $('#cntReport').textContent = (r.status||'').toUpperCase()||'✓';
+  const obs = r.observability||{};
+  if(obs.repair_iterations!=null) setStat('stRepairs', esc(obs.repair_iterations));
+  const verified = !!r.verified;
+  let h = '<div class="rep-head">'
+    + '<span class="rep-verified '+(verified?'yes':'no')+'">'+icon(verified?'check':'alert',12)+' '+(verified?'VERIFIED':'NOT VERIFIED')+'</span>'
+    + statusChipHtml(r.status)
+    + '<span class="tag">'+esc(r.repo_name||'')+'</span>'
+    + '</div>';
+  h += '<div class="rep-summary">'+esc(r.summary||'No summary produced.')+'</div>';
+  h += '<div class="rep-grid">'
+    + '<div class="rcell"><div class="v">'+((r.files_changed||[]).length)+'</div><div class="k">files changed</div></div>'
+    + '<div class="rcell"><div class="v">'+((r.tests_run||[]).length)+'</div><div class="k">test executions</div></div>'
+    + '<div class="rcell"><div class="v">'+esc(obs.repair_iterations!=null?obs.repair_iterations:(r.repairs_performed||[]).length)+'</div><div class="k">repairs</div></div>'
+    + '<div class="rcell"><div class="v">'+esc(obs.model_calls_total!=null?obs.model_calls_total:'–')+'</div><div class="k">model calls</div></div>'
+    + '<div class="rcell"><div class="v">'+esc(obs.tool_calls_total!=null?obs.tool_calls_total:'–')+'</div><div class="k">tool calls</div></div>'
+    + '</div>';
+  const findings = r.review && r.review.findings ? r.review.findings : [];
+  if(findings.length){
+    h += '<div class="rep-sec"><div class="h">'+icon('eye',11)+' Review findings ('+findings.length+')</div><ul>'
+      + findings.slice(0,12).map(f=>'<li><span class="sev-'+esc(f.severity||'info')+'">['+esc(f.severity)+']</span><span><b style="color:var(--text)">'+esc(f.path)+':'+esc(f.line)+'</b> — '+esc(f.explanation||f.evidence||'')+'</span></li>').join('')
+      + '</ul></div>';
+  }
+  if((r.failures_encountered||[]).length){
+    h += '<div class="rep-sec"><div class="h">'+icon('alert',11)+' Failures encountered</div><ul>'
+      + r.failures_encountered.map(f=>'<li><span class="dotm">▲</span><span>['+esc(f.category)+'] '+esc((f.error||'').slice(0,180))+'</span></li>').join('')
+      + '</ul></div>';
+  }
+  if((r.validation_evidence||[]).length){
+    h += '<div class="rep-sec"><div class="h">'+icon('check',11)+' Validation evidence</div><ul>'
+      + r.validation_evidence.map(v=>'<li><span class="dotg">✓</span>'+esc(v)+'</li>').join('')
+      + '</ul></div>';
+  }
+  if((r.remaining_risks||[]).length){
+    h += '<div class="rep-sec"><div class="h">'+icon('alert',11)+' Remaining risks</div><ul>'
+      + r.remaining_risks.map(v=>'<li><span class="dotm">▲</span>'+esc(v)+'</li>').join('')
+      + '</ul></div>';
+  }
+  h += '<details class="rawrep" id="rawRep"><summary>Raw report (markdown)</summary><pre id="rawRepBody">loading…</pre></details>';
+  if((S.runStatus||'').toUpperCase()==='COMPLETED'){
+    h += '<div class="rep-actions"><button id="pushToGithubBtn" class="github-btn">'+icon('zap',13)+' Push Changes to GitHub</button></div>';
+  }
+  setPaneHtml(el, h);
+  const pbtn = $('#pushToGithubBtn');
+  if(pbtn) pbtn.addEventListener('click', pushToGitHub);
+  $('#rawRep').addEventListener('toggle', async ()=>{
+    if(!$('#rawRep').open || $('#rawRepBody').dataset.loaded) return;
+    try{
+      const md = await api('/api/agent-runs/'+S.runId+'/report?format=markdown');
+      $('#rawRepBody').textContent = md.markdown || '(empty)';
+    }catch(e){ $('#rawRepBody').textContent = 'failed to load: '+e.message; }
+    $('#rawRepBody').dataset.loaded = '1';
+  });
+}
+
+/* ---- push to GitHub ---- */
+async function pushToGitHub(){
+  if(!S.runId) return;
+  const repoUrl = prompt('Enter GitHub repo URL (e.g. https://github.com/user/repo):');
+  if(!repoUrl) return;
+  const msg = prompt('Commit message:', 'fix: applied by CodeWeaver autonomous agent');
+  if(!msg) return;
+  const btn = document.getElementById('pushToGithubBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Pushing…'; }
+  sysLine('pushing workspace to GitHub as pull request…','sys');
+  try{
+    const d = await api('/api/agent-runs/'+S.runId+'/push', {
+      method:'POST',
+      body: JSON.stringify({repo_url: repoUrl, commit_message: msg}),
+    });
+    if(!d || !d.pr_url) throw new Error((d && d.detail) ? String(d.detail) : 'no PR URL returned');
+    sysLine('PR created: '+d.pr_url, 'ok');
+    toast('Pull request opened: '+d.pr_url, 'ok');
+    if(btn){ btn.textContent = 'PR Opened'+(d.pr_number ? ' #'+d.pr_number : ''); btn.classList.add('done'); }
+  }catch(e){
+    appendTerm({phase:'GITHUB', ts:new Date().toISOString(), level:'error', message:'GitHub push failed: '+e.message});
+    toast('GitHub push failed: '+e.message, 'err');
+    if(btn){ btn.textContent = 'Push Changes to GitHub'; btn.disabled = false; }
+  }
+}
+
+/* ==================================================================
+ * Terminal
+ * ================================================================== */
+function clearTerm(reset){
+  $('#termBody').innerHTML = '';
+  S.evCount = 0; S.pendNew = 0; S.termStuck = false; S.lastTermPhase = null;
+  $('#termCount').textContent = '0 events';
+  $('#jumpPill').hidden = true;
+  if(reset) sysLine('terminal ready — waiting for agent events…','sys');
+}
+function sysLine(msg, kind){
+  const box = $('#termBody');
+  const row = document.createElement('div');
+  row.className = 'tl sys '+(kind||'');
+  row.innerHTML = '<span class="tl-t">'+fmtTs(new Date().toISOString())+'</span><span class="tl-msg">'+esc(msg)+'</span>';
+  box.appendChild(row);
+  autoScroll(true);
+}
+function appendTerm(ev){
+  const box = $('#termBody');
+  const isNewPhase = ev.phase && ev.phase!==S.lastTermPhase;
+  const lvl = ev.level||'info';
+  const row = document.createElement('div');
+  row.className = 'tl lvl-'+lvl+(isNewPhase?' newphase':'')+(lvl==='info'&&/pass|succe|complet/i.test(ev.message||'')?' ok':'');
+  row.innerHTML = '<span class="tl-t">'+esc(fmtTs(ev.ts))+'</span>'
+    + '<span class="tl-ph">'+esc(String(ev.phase||'SYS').toUpperCase())+'</span>'
+    + '<span class="tl-msg">'+esc(ev.message||'')+'</span>';
+  const d = unwrapData(ev.data);
+  if(d && typeof d==='object' && Object.keys(d).length){
+    const think = d.thinking||d.reasoning||d.thought||d.reasoning_text;
+    if(think){
+      const t = document.createElement('div');
+      t.className='tl-think'; t.textContent = String(think).slice(0,4000);
+      row.appendChild(t);
+    } else {
+      const lines = dataLines(d);
+      if(lines.length){
+        const t = document.createElement('div');
+        t.className='tl-data'; t.textContent = lines.join('\n');
+        row.appendChild(t);
+      }
+    }
+  }
+  box.appendChild(row);
+  S.evCount++;
+  $('#termCount').textContent = S.evCount+' events';
+  if(box.children.length>900) box.removeChild(box.firstChild); // keep DOM lean
+  S.lastTermPhase = ev.phase||S.lastTermPhase;
+  autoScroll(false);
+}
+function autoScroll(force){
+  const box = $('#termBody');
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 70;
+  if(nearBottom || force){
+    box.scrollTop = box.scrollHeight;
+    S.termStuck = false; S.pendNew = 0;
+    $('#jumpPill').hidden = true;
+  } else {
+    S.termStuck = true; S.pendNew++;
+    $('#jumpPill').hidden = false;
+    $('#jumpN').textContent = S.pendNew+' new';
+  }
+}
+$('#termBody').addEventListener('scroll', ()=>{
+  const box = $('#termBody');
+  if(box.scrollHeight - box.scrollTop - box.clientHeight < 70){
+    S.termStuck=false; S.pendNew=0; $('#jumpPill').hidden=true;
+  }
+});
+$('#jumpPill').addEventListener('click', ()=>{
+  const box = $('#termBody'); box.scrollTop = box.scrollHeight;
+  S.termStuck=false; S.pendNew=0; $('#jumpPill').hidden=true;
+});
+$('#termClear').addEventListener('click', ()=>clearTerm(true));
+
+/* ==================================================================
+ * Layout toggles / settings
+ * ================================================================== */
+function toggleSidebar(){
+  if(S.mobile.matches){ $('#sidebar').classList.toggle('open'); return; }
+  const sb = $('#sidebar');
+  sb.classList.toggle('collapsed');
+  $('#sbToggle').classList.toggle('on', !sb.classList.contains('collapsed'));
+}
+function toggleTerminal(){
+  if(S.mobile.matches){ $('#terminal').classList.toggle('open'); return; }
+  const t = $('#terminal');
+  t.classList.toggle('collapsed');
+  $('#termToggle').classList.toggle('on', !t.classList.contains('collapsed'));
+}
+$('#sbCollapse').addEventListener('click', toggleSidebar);
+$('#sbToggle').addEventListener('click', toggleSidebar);
+$('#termCollapse').addEventListener('click', toggleTerminal);
+$('#termToggle').addEventListener('click', toggleTerminal);
+
+const pop = $('#settingsPop');
+$('#settingsBtn').addEventListener('click', e=>{ e.stopPropagation(); pop.hidden = !pop.hidden; });
+document.addEventListener('click', e=>{ if(!pop.hidden && !pop.contains(e.target) && e.target!==$('#settingsBtn')) pop.hidden = true; });
+$('#reconnectBtn').addEventListener('click', async ()=>{
+  pop.hidden = true;
+  toast('Reconnecting…','info');
+  const ok = await detectApi();
+  await refreshHealth();
+  if(ok||S.online){ refreshRepos(); refreshRuns(); toast('Connected to '+S.api,'ok'); }
+  else toast('Backend unreachable at '+S.api,'err');
+});
+
+/* ---------------- polling ---------------- */
+setInterval(()=>{ // runs + repos
+  if(document.hidden || !S.online) return;
+  S.pollN++;
+  refreshRuns();
+  if(S.pollN%2===0) refreshRepos();
+}, 4000);
+setInterval(()=>refreshHealth(), 5000);
+setInterval(()=>{ $('#clockChip').textContent = new Date().toLocaleTimeString('en-GB',{hour12:false}); }, 1000);
+
+/* ---------------- decorate static icons & boot ---------------- */
+$$('[data-ico]').forEach(el=>{ el.innerHTML = icon(el.dataset.ico, el.dataset.ico==='plus'||el.dataset.ico==='settings'?13:14); });
+$('#sbCollapse').innerHTML = icon('chevL',15);
+$('#sbToggle').innerHTML = icon('panelL',15);
+$('#termToggle').innerHTML = icon('panelR',15);
+$('#termClear').innerHTML = icon('eraser',14);
+$('#termCollapse').innerHTML = icon('chevR',15);
+$('#settingsBtn').innerHTML = icon('settings',15);
+
+renderPipelineIdle();
+setMode(S.mode);
+repoSourceChanged();
+clearTerm(true);
+
+(async function boot(){
+  const ok = await detectApi();
+  await refreshHealth();
+  if(ok){
+    refreshRepos(); refreshRuns();
+  } else {
+    toast('Backend unreachable at '+S.api+' — start it with: uvicorn app.api.main:app --port 8600','err');
+  }
+  sysLine(ok?('connected to '+S.api):('backend unreachable — retrying every 5s'), ok?'ok':'err');
+})();
+</script>
+</body>
+</html>

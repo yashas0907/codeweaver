@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# CodeWeaver runtime data (databases, workspaces, logs)
+data/
+!data/.gitkeep
+
+# Secrets
+.env
+*.env.local
+
+# Node / frontend
+node_modules/
+dist/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
