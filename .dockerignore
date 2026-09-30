@@ -1,0 +1,22 @@
+# Build context exclusions — keeps the image small and secrets out.
+.git
+.gitignore
+.env
+*.env.local
+data/
+backend/data/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+node_modules/
+sample_repos/
+docs/
+*.log
+Dockerfile
+.dockerignore
+render.yaml
+docker-compose.yml
+README.md

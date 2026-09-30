@@ -105,6 +105,45 @@ Two tiny, intentionally imperfect sample projects are included under
 or the dashboard, index it, and launch an agent run to watch the full
 plan → edit → test → review → report cycle.
 
+## Deployment
+
+CodeWeaver ships as a single container that serves both the API and the
+dashboard. A `Dockerfile`, `.dockerignore`, and a `render.yaml` blueprint are
+included.
+
+### Render (free, recommended)
+
+1. Push this repository to GitHub (it already is, if you cloned it from there).
+2. Render Dashboard → **New** → **Blueprint** → select the repository.
+3. Render reads `render.yaml` and configures the service automatically.
+4. When prompted, paste the two secrets:
+   - `CODEWEAVER_LLM_API_KEY` — your Groq key (`gsk_...`)
+   - `CODEWEAVER_GITHUB_TOKEN` — your GitHub token (`ghp_...`)
+5. Deploy. The dashboard is served at the service URL; health at `/api/health`.
+
+The frontend talks to whatever origin serves it, so no URL configuration is
+needed after deploy.
+
+### Any Docker host
+
+```bash
+docker build -t codeweaver .
+docker run -p 8600:8600 \
+  -e CODEWEAVER_LLM_PROVIDER=http_compatible \
+  -e CODEWEAVER_LLM_MODEL=qwen/qwen3.8-27b \
+  -e CODEWEAVER_LLM_BASE_URL=https://api.groq.com/openai/v1 \
+  -e CODEWEAVER_LLM_API_KEY=gsk_... \
+  -e CODEWEAVER_GITHUB_TOKEN=ghp_... \
+  -v codeweaver-data:/app/data \
+  codeweaver
+```
+
+### Storage note
+
+The agent writes databases, workspaces and repo snapshots under `/app/data`.
+On hosts with an **ephemeral disk** (free tiers) that state resets on
+restart/redeploy — attach a persistent volume at `/app/data` to keep it.
+
 ## License
 
 All rights reserved. See repository history for provenance.

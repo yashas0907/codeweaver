@@ -1,0 +1,30 @@
+# Render blueprint — deploys CodeWeaver as a free web service.
+#
+# Usage: Render Dashboard → New → Blueprint → pick this repository.
+# Render reads this file and configures everything automatically.
+# The two secret values are left blank here on purpose; set them in the
+# Render dashboard when prompted (they are never stored in git).
+services:
+  - type: web
+    name: codeweaver
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: CODEWEAVER_LLM_PROVIDER
+        value: http_compatible
+      - key: CODEWEAVER_LLM_MODEL
+        value: qwen/qwen3.8-27b
+      - key: CODEWEAVER_LLM_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: CODEWEAVER_AGENT_MODE
+        value: WORKSPACE_EDIT
+      - key: CODEWEAVER_ALLOW_NETWORK_TOOLS
+        value: "true"
+      # Secrets — set these in the Render dashboard (sync:false keeps them out of git).
+      - key: CODEWEAVER_LLM_API_KEY
+        sync: false
+      - key: CODEWEAVER_GITHUB_TOKEN
+        sync: false
