@@ -880,19 +880,31 @@ async function detectApi(){
   ['http://127.0.0.1:8600','http://localhost:8600'].forEach(c=>{ if(!cands.includes(c)) cands.push(c); });
   for(const c of cands){
     try{
-      const r = await fetch(c+'/api/health',{cache:'no-store'});
+      const ctrl = new AbortController();
+      const t = setTimeout(()=>ctrl.abort(), 60000);   // patient: free tiers cold-start slowly
+      const r = await fetch(c+'/api/health',{cache:'no-store', signal: ctrl.signal});
+      clearTimeout(t);
       if(r.ok){ S.api = c; return true; }
     }catch(e){}
   }
-  S.api = cands[cands.length-1];
+  // Prefer the page's own origin as the default (correct when deployed).
+  S.api = cands[0] || '';
   return false;
 }
 
 /* ---------------- health / status bar ---------------- */
 let wasOnline = null;
+let healthInFlight = false;
 async function refreshHealth(){
+  // Free hosting tiers (Render, Railway, ...) spin down when idle and can
+  // take ~60s to wake. Until the first successful contact, wait patiently and
+  // show WAKING instead of DOWN; once warm, use a short timeout.
+  if(healthInFlight) return;
+  const warm = (S.online === true || wasOnline === true);
+  if(!warm) setWaking();
+  healthInFlight = true;
   try{
-    const h = await api('/api/health',{timeout:4000});
+    const h = await api('/api/health',{timeout: warm ? 8000 : 60000});
     S.health = h;
     setOnline(true);
     $('#verChip').textContent = '⚒ v'+(h.version||'?');
@@ -905,6 +917,17 @@ async function refreshHealth(){
     else { lc.textContent=prov; lc.style.cssText='background:var(--panel3);color:var(--text)'; }
     $('#providerHint').textContent = prov==='none' ? 'deterministic engine · no LLM configured' : 'provider: '+prov;
   }catch(e){ setOnline(false); }
+  finally { healthInFlight = false; }
+}
+function setWaking(){
+  if(S.online) return;
+  const dot = $('#sbDot'), lbl = $('#sbApi');
+  if(!dot || !lbl) return;
+  dot.className = 'dot down';
+  lbl.textContent = 'WAKING · '+S.api;
+  lbl.style.color = 'var(--amber2)';
+  const hint = $('#sbApiHint'); if(hint) hint.textContent = 'waking the server — free tier can take up to ~60s';
+  const lt = $('#termLiveTxt'); if(lt) lt.textContent = 'waking';
 }
 function setOnline(ok){
   S.online = ok;
@@ -1001,16 +1024,25 @@ async function addRepo(){
   const source = $('#repoSource').value;
   const body = { name, source };
   if(source==='local') body.path = $('#repoPath').value.trim() || './sample_repos/notes_service';
-  else body.url = $('#repoUrl').value.trim();
+  else {
+    body.url = ($('#repoUrl').value || '').trim();
+    if(!body.url){ toast('Repository URL is required','warn'); $('#repoUrl').focus(); return; }
+  }
   const branch = $('#repoBranch').value.trim(); if(branch) body.branch = branch;
   const btn = $('#addRepoBtn'); btn.disabled = true; btn.classList.add('loading');
+  if(btn.lastChild && btn.lastChild.nodeType === 3) btn.lastChild.textContent = ' Indexing…';
+  toast('Indexing '+name+' — large repositories can take a minute','info');
   try{
-    await api('/api/repositories',{method:'POST',body:JSON.stringify(body)});
+    // Generous timeout: cloning + indexing a big repo can exceed the default.
+    await api('/api/repositories',{method:'POST',body:JSON.stringify(body),timeout:600000});
     toast('Repository indexed: '+name,'ok');
     $('#repoName').value=''; $('#repoPath').value=''; $('#repoUrl').value=''; $('#repoBranch').value='';
     toggleAddRepo(false); refreshRepos();
   }catch(e){ toast('Index failed: '+e.message,'err'); }
-  finally{ btn.disabled=false; btn.classList.remove('loading'); }
+  finally{
+    btn.disabled=false; btn.classList.remove('loading');
+    if(btn.lastChild && btn.lastChild.nodeType === 3) btn.lastChild.textContent = 'Index Repository';
+  }
 }
 $('#addRepoBtn').addEventListener('click', addRepo);
 function toggleAddRepo(force){

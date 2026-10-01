@@ -21,6 +21,9 @@ services:
         value: https://api.groq.com/openai/v1
       - key: CODEWEAVER_AGENT_MODE
         value: WORKSPACE_EDIT
+      # Install each ingested repo's declared dependencies before running its tests.
+      - key: CODEWEAVER_INSTALL_TEST_DEPENDENCIES
+        value: "true"
       - key: CODEWEAVER_ALLOW_NETWORK_TOOLS
         value: "true"
       # Secrets — set these in the Render dashboard (sync:false keeps them out of git).

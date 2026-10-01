@@ -89,6 +89,7 @@ class Settings(BaseSettings):
 
     # Agent behaviour
     agent_mode: str = "WORKSPACE_EDIT"
+    install_test_dependencies: bool = True
     max_repair_iterations: int = Field(default=3, ge=0, le=10)
     max_test_timeout_seconds: int = Field(default=300, ge=5, le=3600)
     max_tool_timeout_seconds: int = Field(default=120, ge=5, le=3600)

@@ -440,6 +440,23 @@ class CodeWeaverPipeline:
         """Runs tests for code-change and investigation tasks; skips pure review."""
         if task_type in ("review", "security", "explain"):
             return False, []
+        # Real repositories need their declared dependencies installed before
+        # the suite can even be collected (import-time ModuleNotFoundError).
+        if self.settings.install_test_dependencies:
+            try:
+                dep_result = await registry.execute("install_dependencies", {}, phase=AgentPhase.TESTING)
+                await self._persist_tool(run_id, "install_dependencies", {}, dep_result)
+                if dep_result.ok:
+                    headline = (dep_result.output or "").splitlines()[0][:160] if dep_result.output else "done"
+                    await self.emit(AgentEvent(
+                        run_id=run_id, phase=AgentPhase.TESTING, level="info",
+                        message=f"Dependencies prepared: {headline}",
+                    ))
+            except Exception as exc:  # noqa: BLE001 — install failures must not abort the run
+                await self.emit(AgentEvent(
+                    run_id=run_id, phase=AgentPhase.TESTING, level="warning",
+                    message=f"dependency install skipped: {exc}",
+                ))
         try:
             result = await registry.execute("run_tests", {}, phase=AgentPhase.TESTING)
         except Exception as exc:

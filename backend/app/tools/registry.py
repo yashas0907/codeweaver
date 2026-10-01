@@ -69,6 +69,8 @@ class ToolRegistry:
                     params={"path": "str?"}, handler=self._git_log))
         reg(ToolDef("run_tests", "Run the test suite (pytest/jest/go test auto-detected)", "exec",
                     params={"command": "str?"}, handler=self._run_tests))
+        reg(ToolDef("install_dependencies", "Install the repository's declared Python dependencies", "exec",
+                    handler=self._install_dependencies))
         reg(ToolDef("run_linter", "Run the available linter", "exec", handler=self._run_linter))
         reg(ToolDef("run_build", "Run build/compile validation", "exec", handler=self._run_build))
         reg(ToolDef("run_typecheck", "Run type checking when available", "exec", handler=self._run_typecheck))
@@ -269,6 +271,44 @@ class ToolRegistry:
         )
         return summary, {"test_run": test_run.model_dump(mode="json")}
 
+    async def _install_dependencies(self, ctx: ToolContext, args: dict) -> tuple[str, dict]:
+        """Install the repo's declared Python dependencies so its tests can run.
+
+        Real repositories need their dependencies present before the suite can
+        even be collected (``ModuleNotFoundError`` at import time). This does
+        what CI does: read the manifest and pip-install it. Failures are
+        reported, never fatal.
+        """
+        root = ctx.workspace.root
+        if not _has_binary("python"):
+            return "python not available; skipping dependency install", {"installed": False, "reason": "no python"}
+
+        cmds: list[list[str]] = []
+        req = root / "requirements.txt"
+        pyproject = root / "pyproject.toml"
+        if req.is_file():
+            cmds.append(["python", "-m", "pip", "install", "-q", "-r", str(req)])
+        elif pyproject.is_file():
+            deps = _read_pyproject_dependencies(pyproject)
+            if deps:
+                cmds.append(["python", "-m", "pip", "install", "-q", *deps])
+        if not cmds:
+            return "no Python dependency manifest found; nothing to install", {"installed": False, "reason": "no manifest"}
+
+        timeout = max(60, min(self.settings.max_test_timeout_seconds, 600))
+        outputs: list[str] = []
+        ok = True
+        for cmd in cmds:
+            result = await asyncio.to_thread(run_command, cmd, str(root), timeout)
+            tail = (result.stdout + "\n" + result.stderr).strip()[-1500:]
+            outputs.append(f"$ {' '.join(cmd[:6])} (exit={result.exit_code})\n{tail}")
+            if result.exit_code != 0:
+                ok = False
+        headline = "dependency install finished" if ok else "dependency install reported errors"
+        summary = f"{headline}\n" + "\n".join(outputs)
+        ctx.last_test_output = summary
+        return summary, {"installed": ok, "commands": [c[:6] for c in cmds]}
+
     async def _run_linter(self, ctx: ToolContext, args: dict) -> tuple[str, dict]:
         root = str(ctx.workspace.root)
         if _has_binary("ruff"):
@@ -379,6 +419,23 @@ def _has_binary(name: str) -> bool:
     from shutil import which
 
     return which(name) is not None
+
+
+def _read_pyproject_dependencies(path: Path) -> list[str]:
+    """Declared dependencies from a PEP 621 pyproject.toml (runtime + dev group).
+
+    Capped so a pathological manifest cannot trigger a runaway install.
+    """
+    try:
+        import tomllib
+
+        with path.open("rb") as fh:
+            data = tomllib.load(fh)
+        deps = list((data.get("project") or {}).get("dependencies") or [])
+        deps += list((data.get("dependency-groups") or {}).get("dev") or [])
+        return [str(d) for d in deps][:40]
+    except Exception:  # noqa: BLE001 — a malformed manifest must not be fatal
+        return []
 
 
 def _is_windows() -> bool:
